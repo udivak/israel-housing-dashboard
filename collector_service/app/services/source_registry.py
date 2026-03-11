@@ -1,0 +1,92 @@
+from typing import Optional, Type
+
+from pymongo.asynchronous.database import AsyncDatabase
+
+from app.core.config import Settings, settings as global_settings
+from app.core.exceptions import SourceNotFoundError
+from app.core.logging import get_logger
+from app.db.repositories.sources import SourcesRepository
+from app.models.source import SourceDefinition, SourceStatus
+from app.scrapers.base import BaseScraper
+from app.scrapers.cbs import CBSScraper
+from app.scrapers.madlan import MadlanScraper
+from app.scrapers.odata_il import OdataILScraper
+from app.scrapers.tax_authority import TaxAuthorityScraper
+
+logger = get_logger(__name__)
+
+_SCRAPER_REGISTRY: dict[str, Type[BaseScraper]] = {
+    OdataILScraper.source_name: OdataILScraper,
+    TaxAuthorityScraper.source_name: TaxAuthorityScraper,
+    CBSScraper.source_name: CBSScraper,
+    MadlanScraper.source_name: MadlanScraper,
+}
+
+DEFAULT_SOURCES: list[SourceDefinition] = [
+    SourceDefinition(
+        name="odata_il_nadlan",
+        display_name="odata.org.il — Real Estate Transactions",
+        description="Real estate transaction data from the Israeli open data portal",
+        status=SourceStatus.ACTIVE,
+        source_url=(
+            "https://www.odata.org.il/dataset/84f2bc2d-87a0-474e-a3ea-63d7bb9b5447"
+            "/resource/5eb859da-6236-4b67-bcd1-ec4b90875739/download/.zip"
+        ),
+        tags=["real-estate", "transactions"],
+    ),
+    SourceDefinition(
+        name="tax_authority_nadlan",
+        display_name="Israel Tax Authority Transactions",
+        description="Real estate transaction data from the Israeli Tax Authority",
+        status=SourceStatus.PLANNED,
+        source_url="https://www.misim.gov.il/mmdlsmk/Default.aspx",
+        tags=["real-estate", "transactions", "tax-authority"],
+    ),
+    SourceDefinition(
+        name="cbs_housing",
+        display_name="CBS Housing Statistics",
+        description="Housing statistics and price indices from the Central Bureau of Statistics",
+        status=SourceStatus.PLANNED,
+        source_url="https://www.cbs.gov.il/he/pages/default.aspx",
+        tags=["housing", "statistics", "cbs"],
+    ),
+    SourceDefinition(
+        name="madlan_for_sale",
+        display_name="Madlan — For Sale Listings",
+        description="Live for-sale property listings scraped from madlan.co.il",
+        status=SourceStatus.ACTIVE,
+        source_url="https://www.madlan.co.il/for-sale/ישראל",
+        tags=["real-estate", "listings", "madlan", "for-sale"],
+    ),
+]
+
+
+class SourceRegistry:
+    def __init__(self, db: AsyncDatabase, scraper_settings: Settings = global_settings) -> None:
+        self._repo = SourcesRepository(db)
+        self._settings = scraper_settings
+
+    async def seed_default_sources(self) -> None:
+        for source in DEFAULT_SOURCES:
+            await self._repo.upsert(source.model_dump(exclude={"id"}))
+        await logger.ainfo("Default sources seeded", count=len(DEFAULT_SOURCES))
+
+    async def get_scraper(self, source_name: str) -> BaseScraper:
+        scraper_class = _SCRAPER_REGISTRY.get(source_name)
+        if scraper_class is None:
+            source_doc = await self._repo.get_by_name(source_name)
+            if source_doc is None:
+                raise SourceNotFoundError(source_name)
+            raise SourceNotFoundError(source_name)
+        return scraper_class(self._settings)
+
+    async def list_sources(self, limit: int = 100, offset: int = 0) -> list[dict]:
+        return await self._repo.list_sources(limit=limit, offset=offset)
+
+    async def count_sources(self) -> int:
+        return await self._repo.count()
+
+    def list_active_source_names(self) -> list[str]:
+        return [
+            s.name for s in DEFAULT_SOURCES if s.status == SourceStatus.ACTIVE
+        ]
