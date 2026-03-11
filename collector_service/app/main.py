@@ -1,0 +1,77 @@
+import uuid
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
+import structlog
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from app.api.router import api_router, health_router
+from app.core.config import settings
+from app.core.exceptions import register_exception_handlers
+from app.core.logging import configure_logging
+from app.db.mongo import close_mongo_connection, connect_to_mongo, create_indexes, get_database
+from app.db.repositories.jobs import JobsRepository
+from app.services.collection_service import CollectionService
+from app.services.source_registry import SourceRegistry
+
+configure_logging()
+logger = structlog.get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    await logger.ainfo("Starting up collector_service")
+    await connect_to_mongo()
+    await create_indexes()
+
+    db = get_database()
+    registry = SourceRegistry(db)
+    await registry.seed_default_sources()
+
+    app.state.source_registry = registry
+    app.state.jobs_repo = JobsRepository(db)
+    app.state.collection_service = CollectionService(db, registry)
+
+    await logger.ainfo("Startup complete")
+    yield
+
+    await logger.ainfo("Shutting down collector_service")
+    await close_mongo_connection()
+
+
+app = FastAPI(
+    title="Israel Housing — Collector Service",
+    description="Collects and ingests Israeli housing market data from multiple sources.",
+    version="1.0.0",
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
+    request_id = str(uuid.uuid4())
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        request_id=request_id,
+        service_name=settings.SERVICE_NAME,
+    )
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+register_exception_handlers(app)
+app.include_router(health_router)
+app.include_router(api_router)
