@@ -41,8 +41,9 @@ uvicorn app.main:app --reload --port 8000
 | Name | Status | Description |
 |------|--------|-------------|
 | `odata_il_nadlan` | Active | Real estate transactions from odata.org.il (ZIP → CSV) |
-| `tax_authority_nadlan` | Planned | Israel Tax Authority transactions |
-| `cbs_housing` | Planned | CBS housing statistics and price indices |
+| `tax_authority_nadlan` | Active | Real estate transactions from the Israel Tax Authority via Govmap API |
+| `cbs_housing` | Active | Housing price indices and rent statistics from the Central Bureau of Statistics |
+| `madlan_for_sale` | Active | Live for-sale property listings scraped from madlan.co.il (Playwright) |
 
 ## Architecture
 

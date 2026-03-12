@@ -1,5 +1,6 @@
 from typing import Optional
 
+import certifi
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.database import AsyncDatabase
 
@@ -19,6 +20,7 @@ async def connect_to_mongo() -> None:
         settings.MONGODB_URI,
         connectTimeoutMS=settings.MONGODB_CONNECT_TIMEOUT_MS,
         serverSelectionTimeoutMS=settings.MONGODB_SERVER_SELECTION_TIMEOUT_MS,
+        tlsCAFile=certifi.where(),
     )
     _db = _client[settings.MONGODB_DB_NAME]
     await logger.ainfo("Connected to MongoDB", db=settings.MONGODB_DB_NAME)
