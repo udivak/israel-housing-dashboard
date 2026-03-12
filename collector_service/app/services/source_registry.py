@@ -45,10 +45,10 @@ DEFAULT_SOURCES: list[SourceDefinition] = [
     SourceDefinition(
         name="cbs_housing",
         display_name="CBS Housing Statistics",
-        description="Housing statistics and price indices from the Central Bureau of Statistics",
-        status=SourceStatus.PLANNED,
-        source_url="https://www.cbs.gov.il/he/pages/default.aspx",
-        tags=["housing", "statistics", "cbs"],
+        description="Housing price indices and rent statistics from the Central Bureau of Statistics",
+        status=SourceStatus.ACTIVE,
+        source_url="https://api.cbs.gov.il/index/data/price",
+        tags=["housing", "statistics", "cbs", "price-index"],
     ),
     SourceDefinition(
         name="madlan_for_sale",
