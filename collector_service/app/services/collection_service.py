@@ -1,8 +1,9 @@
 import asyncio
 from datetime import UTC, datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Any, Optional
 
-from pymongo.asynchronous.database import AsyncDatabase
+if TYPE_CHECKING:
+    from pymongo.asynchronous.database import AsyncDatabase  # type: ignore[import-untyped]
 
 from app.core.exceptions import JobAlreadyRunningError, SourceNotFoundError
 from app.core.logging import get_logger
@@ -10,14 +11,15 @@ from app.db.repositories.jobs import JobsRepository
 from app.db.repositories.logs import PipelineLogsRepository
 from app.db.repositories.raw_records import RawRecordsRepository
 from app.models.jobs import JobStatus
-from app.models.records import RetrievalMethod
+from app.models.records import ParsingStatus, RetrievalMethod
+from app.scrapers.tax_authority import TaxAuthorityScraper
 from app.services.source_registry import SourceRegistry
 
 logger = get_logger(__name__)
 
 
 class CollectionService:
-    def __init__(self, db: AsyncDatabase, registry: SourceRegistry) -> None:
+    def __init__(self, db: "AsyncDatabase", registry: SourceRegistry) -> None:
         self._db = db
         self._registry = registry
         self._jobs_repo = JobsRepository(db)
@@ -54,24 +56,78 @@ class CollectionService:
 
         try:
             scraper = await self._registry.get_scraper(source_name)
-            result = await scraper.run()
 
-            if result.status == "failed":
-                raise RuntimeError(result.error or "Scraper returned failed status")
+            if isinstance(scraper, TaxAuthorityScraper):
+                # Incremental path: flush city records to DB as they arrive so that
+                # a mid-job failure does not discard already-collected data.
+                inserted_total = 0
+                skipped_total = 0
 
-            raw_records = self._build_raw_records(result, job_id, scraper)
-            inserted, skipped = await self._raw_repo.bulk_upsert(raw_records)
+                async def _flush(city_records: list[dict[str, Any]]) -> None:
+                    nonlocal inserted_total, skipped_total
+                    raw = self._build_raw_records_from_items(
+                        city_records, job_id, scraper
+                    )
+                    ins, skip = await self._raw_repo.bulk_upsert(raw)
+                    inserted_total += ins
+                    skipped_total += skip
+                    await self._jobs_repo.transition(
+                        job_id,
+                        JobStatus.RUNNING,
+                        {
+                            "records_inserted": inserted_total,
+                            "records_skipped": skipped_total,
+                        },
+                    )
+                    await bound_log.ainfo(
+                        "Incremental flush",
+                        flushed=len(city_records),
+                        inserted=ins,
+                        skipped=skip,
+                        total_inserted=inserted_total,
+                    )
 
-            await self._jobs_repo.transition(
-                job_id,
-                JobStatus.COMPLETED,
-                {
-                    "completed_at": datetime.now(UTC),
-                    "records_inserted": inserted,
-                    "records_skipped": skipped,
-                },
-            )
-            await bound_log.ainfo("Job completed", inserted=inserted, skipped=skipped)
+                scraper._flush_callback = _flush  # type: ignore[attr-defined]
+                result = await scraper.run()
+
+                if result.status == "failed":
+                    raise RuntimeError(result.error or "Scraper returned failed status")
+
+                await self._jobs_repo.transition(
+                    job_id,
+                    JobStatus.COMPLETED,
+                    {
+                        "completed_at": datetime.now(UTC),
+                        "records_inserted": inserted_total,
+                        "records_skipped": skipped_total,
+                    },
+                )
+                await bound_log.ainfo(
+                    "Job completed",
+                    inserted=inserted_total,
+                    skipped=skipped_total,
+                )
+
+            else:
+                # Batch path for all other scrapers (unchanged behaviour)
+                result = await scraper.run()
+
+                if result.status == "failed":
+                    raise RuntimeError(result.error or "Scraper returned failed status")
+
+                raw_records = self._build_raw_records(result, job_id, scraper)
+                inserted, skipped = await self._raw_repo.bulk_upsert(raw_records)
+
+                await self._jobs_repo.transition(
+                    job_id,
+                    JobStatus.COMPLETED,
+                    {
+                        "completed_at": datetime.now(UTC),
+                        "records_inserted": inserted,
+                        "records_skipped": skipped,
+                    },
+                )
+                await bound_log.ainfo("Job completed", inserted=inserted, skipped=skipped)
 
         except Exception as exc:
             error_msg = str(exc)
@@ -92,10 +148,13 @@ class CollectionService:
             await bound_log.aerror("Job failed", error=error_msg)
 
     def _build_raw_records(self, result, job_id: str, scraper) -> list[dict]:
-        from app.models.records import ParsingStatus
+        return self._build_raw_records_from_items(result.records, job_id, scraper)
 
+    def _build_raw_records_from_items(
+        self, items: list[dict], job_id: str, scraper
+    ) -> list[dict]:
         records = []
-        for item in result.records:
+        for item in items:
             records.append(
                 {
                     "source_name": scraper.source_name,

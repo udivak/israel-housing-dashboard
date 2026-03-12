@@ -27,11 +27,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await create_indexes()
 
     db = get_database()
+    jobs_repo = JobsRepository(db)
+    recovered = await jobs_repo.recover_stale_jobs()
+    if recovered:
+        await logger.awarning("Recovered stale jobs on startup", count=recovered)
+
     registry = SourceRegistry(db)
     await registry.seed_default_sources()
 
     app.state.source_registry = registry
-    app.state.jobs_repo = JobsRepository(db)
+    app.state.jobs_repo = jobs_repo
     app.state.collection_service = CollectionService(db, registry)
 
     await logger.ainfo("Startup complete")

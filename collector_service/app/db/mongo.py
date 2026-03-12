@@ -27,7 +27,7 @@ async def connect_to_mongo() -> None:
 async def close_mongo_connection() -> None:
     global _client, _db
     if _client is not None:
-        _client.close()
+        await _client.close()
         _client = None
         _db = None
         await logger.ainfo("MongoDB connection closed")

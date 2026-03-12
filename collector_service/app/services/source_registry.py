@@ -37,9 +37,9 @@ DEFAULT_SOURCES: list[SourceDefinition] = [
     SourceDefinition(
         name="tax_authority_nadlan",
         display_name="Israel Tax Authority Transactions",
-        description="Real estate transaction data from the Israeli Tax Authority",
-        status=SourceStatus.PLANNED,
-        source_url="https://www.misim.gov.il/mmdlsmk/Default.aspx",
+        description="Real estate transaction data from the Israeli Tax Authority via Govmap API",
+        status=SourceStatus.ACTIVE,
+        source_url="https://www.govmap.gov.il/api",
         tags=["real-estate", "transactions", "tax-authority"],
     ),
     SourceDefinition(
@@ -71,13 +71,28 @@ class SourceRegistry:
             await self._repo.upsert(source.model_dump(exclude={"id"}))
         await logger.ainfo("Default sources seeded", count=len(DEFAULT_SOURCES))
 
+    def _normalize_source_name(self, name: str) -> str:
+        """Allow URL-friendly hyphenated names to match underscored registry names."""
+        return name.replace("-", "_")
+
     async def get_scraper(self, source_name: str) -> BaseScraper:
-        scraper_class = _SCRAPER_REGISTRY.get(source_name)
+        normalized = self._normalize_source_name(source_name)
+
+        # Guard: refuse to run scrapers for sources still in PLANNED status.
+        # This surfaces a clean 501 instead of burning retry budget on a stub.
+        source_doc = await self._repo.get_by_name(normalized)
+        if source_doc is not None and source_doc.get("status") == SourceStatus.PLANNED:
+            raise NotImplementedError(
+                f"Source '{source_name}' is in PLANNED status and has no active implementation yet."
+            )
+
+        scraper_class = _SCRAPER_REGISTRY.get(normalized)
         if scraper_class is None:
-            source_doc = await self._repo.get_by_name(source_name)
             if source_doc is None:
                 raise SourceNotFoundError(source_name)
-            raise SourceNotFoundError(source_name)
+            raise NotImplementedError(
+                f"Source '{source_name}' is registered but has no scraper implementation yet."
+            )
         return scraper_class(self._settings)
 
     async def list_sources(self, limit: int = 100, offset: int = 0) -> list[dict]:
