@@ -38,11 +38,12 @@ COPY --from=builder /install /usr/local
 # Copy application source
 COPY app/ ./app/
 
-# Download Chromium browser binaries as the app user.
-# playwright install writes to ~/.cache/ms-playwright which is owned by the
-# running user, so this must happen after USER is set.
+# Install Chromium to a shared location (app user has no home dir, so ~/.cache fails).
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
+RUN playwright install chromium \
+    && chown -R app:app /opt/playwright
+
 USER app
-RUN playwright install chromium
 
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

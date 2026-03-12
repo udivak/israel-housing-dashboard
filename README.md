@@ -1,36 +1,137 @@
 # Israel Housing Dashboard
 
-A data engineering platform that collects, stores, and serves Israeli housing market data from multiple open-data sources.
-
-## Services
-
-| Service | Description | Port |
-|---------|-------------|------|
-| `collector_service` | Ingests housing data from open-data APIs into MongoDB | `8000` |
-| `dashboard_service` | Geospatial API for map layers and GeoJSON features | `8000` |
-| `dashboard_app` | Next.js frontend – dashboard, map, search | `3000` |
-| `streamlit_app` | Streamlit frontend for testing/QA | `8501` |
+פלטפורמת הנדסת נתונים לאיסוף, אחסון והצגת נתוני שוק הדיור בישראל ממקורות open-data מרובים.
 
 ---
 
-## הרצה – כל הפקודות
+## ארכיטקטורה
 
-### 1. Backend (dashboard_service)
+המערכת מורכבת מחמישה שירותים רצים בקונטיינרים:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Docker Network                                 │
+│                                                                             │
+│  ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────────┐ │
+│  │  dashboard_app   │     │  streamlit_app   │     │   collector_service  │ │
+│  │  (Next.js:3000) │     │  (Streamlit:8501)│     │   (FastAPI:8001)     │ │
+│  └────────┬────────┘     └────────┬────────┘     └──────────┬──────────┘ │
+│           │                        │                          │            │
+│           │ NEXT_PUBLIC_API_URL    │ API_URL                   │            │
+│           ▼                        ▼                          ▼            │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                    dashboard_service (FastAPI:8000)                  │   │
+│  │              API גאו-מרחבי: שכבות מפה, GeoJSON, חיפוש               │   │
+│  └───────────────────────────────────────────┬─────────────────────────┘   │
+│                                              │                              │
+│                                              ▼                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                         MongoDB (:27017)                              │   │
+│  │  raw_records, properties, districts, parcels, scrape_jobs, sources   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**זרימת נתונים:**
+- **collector_service** – שולף נתונים ממקורות חיצוניים (odata.org.il, madlan, CBS, Govmap) ומכניס ל-MongoDB
+- **dashboard_service** – קורא מ-MongoDB ומגיש API גאו-מרחבי (שכבות, GeoJSON)
+- **dashboard_app** – פרונטאנד Next.js, קורא ל-dashboard_service מהדפדפן
+- **streamlit_app** – פרונטאנד Streamlit לבדיקות, קורא ל-dashboard_service מהשרת
+
+---
+
+## מבנה הפרויקט
+
+```
+israel-housing-dashboard/
+├── docker-compose.yml      # אורקסטרציה של כל השירותים
+├── .env.example            # משתני סביבה – העתק ל-.env
+├── collector_service/      # איסוף נתונים – scrapers, jobs, Playwright
+├── dashboard_service/      # FastAPI – API גאו-מרחבי
+├── dashboard_app/          # Next.js – דשבורד, מפה, חיפוש
+└── streamlit_app/          # Streamlit – לבדיקות ו-QA
+```
+
+---
+
+## הרצה מהירה (Docker Compose)
+
+**דרישות:** Docker ו-Docker Compose מותקנים.
+
+### שלב 1: הכנת סביבה
+
+```bash
+# מהתיקייה הראשית של הפרויקט
+cp .env.example .env
+```
+
+הקובץ `.env` מכיל כבר ערכי ברירת מחדל. ערוך לפי הצורך (למשל `ODATA_IL_RESOURCE_ID`).
+
+### שלב 2: הרצת כל השירותים
+
+```bash
+docker compose up --build
+```
+
+בפעם הראשונה יבנה את כל התמונות (כדקה–שתיים). בהרצות הבאות:
+
+```bash
+docker compose up
+```
+
+### שלב 3: גישה לשירותים
+
+| שירות | URL | תיאור |
+|-------|-----|-------|
+| **דשבורד (Next.js)** | http://localhost:3000 | פרונטאנד ראשי, מפה, חיפוש |
+| **Streamlit** | http://localhost:8501 | פרונטאנד לבדיקות |
+| **Dashboard API** | http://localhost:8000 | API גאו-מרחבי |
+| **Swagger (Dashboard)** | http://localhost:8000/docs | תיעוד API |
+| **Collector API** | http://localhost:8001 | API איסוף נתונים |
+| **Swagger (Collector)** | http://localhost:8001/docs | תיעוד Collector |
+| **MongoDB** | localhost:27017 | מסד נתונים |
+
+### פקודות שימושיות
+
+```bash
+# הרצה ברקע
+docker compose up -d
+
+# עצירה
+docker compose down
+
+# צפייה בלוגים
+docker compose logs -f
+
+# לוגים של שירות ספציפי
+docker compose logs -f dashboard_service
+```
+
+---
+
+## הרצה ללא Docker (פיתוח מקומי)
+
+אם מעדיפים להריץ ללא קונטיינרים:
+
+### 1. MongoDB
+
+```bash
+docker run -d -p 27017:27017 --name mongodb mongo:7
+```
+
+או שימוש ב-Atlas – עדכן `MONGO_URI` ב-.env.
+
+### 2. Backend (dashboard_service)
 
 ```bash
 cd dashboard_service
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 cp .env.example .env
-# ערוך .env: MONGO_URI, DB_NAME
 .venv/bin/uvicorn app.main:app --reload --port 8000
 ```
 
-- **URL:** http://localhost:8000
-- **Swagger:** http://localhost:8000/docs
-- **דרוש:** MongoDB פעיל (localhost:27017 או Atlas)
-
-### 2. Frontend (dashboard_app)
+### 3. Frontend (dashboard_app)
 
 ```bash
 cd dashboard_app
@@ -40,10 +141,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-- **URL:** http://localhost:3000
-- **מפה:** http://localhost:3000/map
-
-### 3. Streamlit (לבדיקות וטסטים)
+### 4. Streamlit (אופציונלי)
 
 ```bash
 cd streamlit_app
@@ -54,9 +152,9 @@ cp .env.example .env
 .venv/bin/streamlit run app.py
 ```
 
-- **URL:** http://localhost:8501
+### 5. Collector (אופציונלי)
 
-### 4. Collector Service (Docker)
+להרצת collector + MongoDB בלבד:
 
 ```bash
 cd collector_service
@@ -64,53 +162,48 @@ cp .env.example .env
 docker compose up --build
 ```
 
-- **API:** http://localhost:8000
-- **Swagger:** http://localhost:8000/docs
+---
 
-### 5. MongoDB (Docker)
+## שירותים – פירוט
 
-```bash
-docker run -d -p 27017:27017 --name mongodb mongo:latest
-```
+| שירות | טכנולוגיה | פורט | תפקיד |
+|-------|-----------|------|-------|
+| **mongo** | MongoDB 7 | 27017 | מסד נתונים משותף |
+| **collector_service** | FastAPI, Python 3.12, Playwright | 8001 | איסוף נתונים ממקורות חיצוניים |
+| **dashboard_service** | FastAPI, Python 3.11 | 8000 | API גאו-מרחבי, שכבות מפה, GeoJSON |
+| **dashboard_app** | Next.js 16, React 19 | 3000 | פרונטאנד ראשי |
+| **streamlit_app** | Streamlit | 8501 | פרונטאנד לבדיקות |
 
-### 6. הרצה מלאה (2 טרמינלים)
+---
 
-```bash
-# טרמינל 1 – Backend
-cd dashboard_service && .venv/bin/uvicorn app.main:app --reload --port 8000
+## מקורות נתונים
 
-# טרמינל 2 – Frontend (Next.js)
-cd dashboard_app && npm run dev
+| שם | סטטוס | תיאור |
+|----|-------|-------|
+| `odata_il_nadlan` | פעיל | עסקאות נדל"ן – odata.org.il (ZIP → CSV) |
+| `tax_authority_nadlan` | פעיל | עסקאות נדל"ן – Govmap (רשות המיסים) |
+| `cbs_housing` | פעיל | מדדי מחירי דיור ושכר דירה – הלמ"ס |
+| `madlan_for_sale` | פעיל | מודעות למכירה – madlan.co.il (Playwright) |
 
-# או Streamlit
-cd streamlit_app && .venv/bin/streamlit run app.py
-```
+---
 
-## מבנה הפרויקט
+## משתני סביבה
 
-```
-israel-housing-dashboard/
-├── collector_service/   # Data collection – scrapers, jobs
-├── dashboard_service/   # FastAPI – API גאו-מרחבי
-├── dashboard_app/       # Next.js – דשבורד, מפה, חיפוש
-├── streamlit_app/       # Streamlit – לבדיקות וטסטים
-└── README.md
-```
+הקובץ `.env.example` מכיל את כל המשתנים. העתק ל-`.env` וערוך:
 
-## קישורים
-
-| שירות | URL |
-|-------|-----|
-| Frontend (Next.js) | http://localhost:3000 |
-| Streamlit | http://localhost:8501 |
-| Backend API | http://localhost:8000 |
-| Swagger | http://localhost:8000/docs |
+| משתנה | ברירת מחדל | תיאור |
+|-------|------------|-------|
+| `MONGODB_URI` / `MONGO_URI` | `mongodb://mongo:27017` | חיבור MongoDB (ב-Docker: `mongo` = שם השירות) |
+| `MONGODB_DB_NAME` / `DB_NAME` | `israel_housing` | שם מסד הנתונים |
+| `ODATA_IL_RESOURCE_ID` | (UUID) | מזהה משאב ב-odata.org.il |
+| `MADLAN_HEADLESS` | `true` | Playwright במצב headless |
+| `SCRAPER_*` | — | timeout, retries, delays |
 
 ---
 
 ## Collector Service — API Reference
 
-All data endpoints are prefixed with `/api/v1`. Every response shares the same envelope:
+כל ה-endpoints מתחילים ב-`/api/v1`. מבנה תשובה:
 
 ```json
 {
@@ -120,298 +213,40 @@ All data endpoints are prefixed with `/api/v1`. Every response shares the same e
 }
 ```
 
-Errors follow:
-
-```json
-{
-  "success": false,
-  "error_code": "JOB_NOT_FOUND",
-  "message": "Job abc123 not found",
-  "details": {}
-}
-```
-
----
-
 ### Health
 
-#### `GET /health`
-
-Liveness probe — returns `200 OK` immediately if the process is alive.
-
-```json
-{ "status": "ok" }
-```
-
----
-
-#### `GET /ready`
-
-Readiness probe — pings MongoDB before responding.
-
-**200 OK**
-```json
-{ "status": "ready" }
-```
-
-**503 Service Unavailable**
-```json
-{ "status": "unavailable", "detail": "MongoDB unreachable" }
-```
-
----
+- **GET /health** – Liveness (`{ "status": "ok" }`)
+- **GET /ready** – Readiness (בודק חיבור MongoDB)
 
 ### Collection
 
-#### `POST /api/v1/collect/source/{source_name}` → `202 Accepted`
-
-Triggers a background scrape job for a single named source.
-
-**Path parameter**
-
-| Param | Type | Description |
-|-------|------|-------------|
-| `source_name` | `string` | Registered source name (e.g. `odata_il_nadlan`) |
-
-**Response**
-```json
-{
-  "success": true,
-  "data": {
-    "job_id": "6613a2f4e2b4a1c9d0f3e811",
-    "message": "Job accepted"
-  },
-  "message": "Collection job accepted for source: odata_il_nadlan"
-}
-```
-
----
-
-#### `POST /api/v1/collect/all` → `202 Accepted`
-
-Triggers a background scrape job for **all active sources** in parallel.
-
-**Response**
-```json
-{
-  "success": true,
-  "data": {
-    "job_id": "6613a2f4e2b4a1c9d0f3e812",
-    "message": "Job accepted"
-  },
-  "message": "Collection job accepted for all active sources"
-}
-```
-
-> Use the returned `job_id` with the Jobs endpoints to track progress.
-
----
+- **POST /api/v1/collect/source/{source_name}** – הפעלת job לאיסוף ממקור בודד
+- **POST /api/v1/collect/all** – הפעלת איסוף מכל המקורות
 
 ### Jobs
 
-#### `GET /api/v1/jobs` — List jobs (paginated)
-
-**Query parameters**
-
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `status` | `string` | — | Filter by status: `pending` `running` `completed` `failed` `partial` |
-| `limit` | `integer` | `20` | Max results (1–100) |
-| `offset` | `integer` | `0` | Pagination offset |
-
-**Response**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "6613a2f4e2b4a1c9d0f3e811",
-      "source_name": "odata_il_nadlan",
-      "status": "completed",
-      "created_at": "2025-04-08T10:00:00Z",
-      "started_at": "2025-04-08T10:00:01Z",
-      "completed_at": "2025-04-08T10:02:14Z",
-      "records_inserted": 4820,
-      "records_skipped": 132,
-      "error_message": null,
-      "sub_job_ids": []
-    }
-  ],
-  "message": ""
-}
-```
-
----
-
-#### `GET /api/v1/jobs/all` — List all jobs (no pagination)
-
-Returns up to 1000 most recent jobs. Use `/api/v1/jobs` with pagination for production use.
-
----
-
-#### `GET /api/v1/jobs/{job_id}` — Get single job
-
-**Path parameter**
-
-| Param | Type | Description |
-|-------|------|-------------|
-| `job_id` | `string` | MongoDB ObjectId of the job |
-
-**200 OK**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "6613a2f4e2b4a1c9d0f3e811",
-    "source_name": "odata_il_nadlan",
-    "status": "running",
-    "created_at": "2025-04-08T10:00:00Z",
-    "started_at": "2025-04-08T10:00:01Z",
-    "completed_at": null,
-    "records_inserted": 0,
-    "records_skipped": 0,
-    "error_message": null,
-    "sub_job_ids": []
-  },
-  "message": ""
-}
-```
-
-**404 Not Found**
-```json
-{
-  "success": false,
-  "error_code": "JOB_NOT_FOUND",
-  "message": "Job 6613a2f4e2b4a1c9d0f3e811 not found"
-}
-```
-
-**Job status lifecycle:**
-```
-pending → running → completed
-                 ↘ failed
-                 ↘ partial
-```
-
----
+- **GET /api/v1/jobs** – רשימת jobs (עם pagination)
+- **GET /api/v1/jobs/{job_id}** – פרטי job
+- **GET /api/v1/jobs/all** – כל ה-jobs (עד 1000)
 
 ### Sources
 
-#### `GET /api/v1/sources` — List registered sources
+- **GET /api/v1/sources** – רשימת מקורות רשומים
+- **GET /api/v1/collections/status** – סיכום הרצה אחרונה לכל מקור
 
-**Query parameters**
-
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `limit` | `integer` | `20` | Max results (1–100) |
-| `offset` | `integer` | `0` | Pagination offset |
-
-**Response**
-```json
-{
-  "success": true,
-  "data": {
-    "sources": [
-      {
-        "id": "6613a2f4e2b4a1c9d0f3e800",
-        "name": "odata_il_nadlan",
-        "display_name": "odata.org.il — Real Estate Transactions",
-        "description": "ZIP archive of all real estate transactions from odata.org.il",
-        "status": "active",
-        "source_url": "https://www.odata.org.il",
-        "tags": ["transactions", "nadlan"]
-      }
-    ],
-    "total": 3,
-    "limit": 20,
-    "offset": 0
-  },
-  "message": ""
-}
-```
-
-Source statuses: `active` | `planned` | `disabled`
+Swagger מלא: http://localhost:8001/docs
 
 ---
 
-#### `GET /api/v1/collections/status` — Latest run summary per source
-
-Returns one status entry per registered source showing the outcome of its most recent scrape job.
-
-**Query parameters**
-
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `limit` | `integer` | `20` | Max results (1–100) |
-| `offset` | `integer` | `0` | Pagination offset |
-
-**Response**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "source_name": "odata_il_nadlan",
-      "display_name": "odata.org.il — Real Estate Transactions",
-      "status": "active",
-      "last_job_status": "completed",
-      "last_job_id": "6613a2f4e2b4a1c9d0f3e811",
-      "last_run_at": "2025-04-08T10:02:14Z",
-      "last_records_inserted": 4820
-    }
-  ],
-  "message": ""
-}
-```
-
----
-
-## Data Sources
-
-| Name | Status | Description |
-|------|--------|-------------|
-| `odata_il_nadlan` | ✅ Active | Real estate transactions — odata.org.il (ZIP → CSV) |
-| `tax_authority_nadlan` | ✅ Active | Real estate transactions via the Govmap public API (Israel Tax Authority) |
-| `cbs_housing` | ✅ Active | Housing price indices and rent stats from the Central Bureau of Statistics |
-| `madlan_for_sale` | ✅ Active | Live for-sale listings scraped from madlan.co.il (Playwright headless) |
-
----
-
-## Architecture
+## Architecture (collector_service)
 
 ```
-collector_service/
-└── app/
-    ├── api/routes/          # FastAPI routers
-    │   ├── health.py        #   GET /health, GET /ready
-    │   ├── collect.py       #   POST /api/v1/collect/...
-    │   ├── jobs.py          #   GET  /api/v1/jobs/...
-    │   └── sources.py       #   GET  /api/v1/sources, /collections/status
-    ├── core/                # Config (pydantic-settings), logging, exceptions
-    ├── db/
-    │   ├── mongo.py         # PyMongo async client + index creation
-    │   └── repositories/    # jobs, sources, records, pipeline logs
-    ├── models/              # Pydantic models — ScrapeJob, SourceDefinition, StandardResponse
-    ├── scrapers/            # BaseScraper ABC + odata_il, madlan, cbs, govmap
-    ├── services/            # CollectionService (job lifecycle) + SourceRegistry
-    └── main.py              # FastAPI app, lifespan, middleware, CORS
+collector_service/app/
+├── api/routes/       # health, collect, jobs, sources
+├── core/              # Config, logging, exceptions
+├── db/                # Mongo client, repositories
+├── models/            # Pydantic models
+├── scrapers/          # odata_il, madlan, cbs, govmap
+├── services/          # CollectionService, SourceRegistry
+└── main.py
 ```
-
----
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `APP_ENV` | `development` | `development` \| `staging` \| `production` |
-| `LOG_LEVEL` | `INFO` | Python log level |
-| `MONGODB_URI` | `mongodb://localhost:27017` | MongoDB connection string |
-| `MONGODB_DB_NAME` | `israel_housing` | Target database |
-| `SCRAPER_REQUEST_TIMEOUT_S` | `30` | HTTP timeout per request |
-| `SCRAPER_MAX_RETRIES` | `3` | Retry attempts on transient failures |
-| `SCRAPER_RETRY_WAIT_S` | `2.0` | Wait between retries (seconds) |
-| `ODATA_IL_RESOURCE_ID` | — | Resource UUID on odata.org.il |
-| `MADLAN_MAX_PAGES_PER_CITY` | `10` | Listing pages to scrape per city |
-| `MADLAN_HEADLESS` | `true` | Run Playwright in headless mode |
-
-See `.env.example` for the full list of variables.
