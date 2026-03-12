@@ -36,6 +36,15 @@ class Settings(BaseSettings):
         "Chrome/124.0.0.0 Safari/537.36"
     )
 
+    # CBS (Central Bureau of Statistics) scraper
+    CBS_BASE_URL: str = "https://api.cbs.gov.il/index/data/price"
+    CBS_SERIES_IDS: str = "40010,70000,140235"
+    CBS_PAGE_SIZE: int = 100
+    CBS_REQUEST_DELAY_S: float = 0.3
+    CBS_READ_TIMEOUT_S: int = 30
+    CBS_VERIFY_SSL: bool = False   # api.cbs.gov.il uses a self-signed intermediate CA
+    CBS_START_PERIOD: str = ""     # e.g. "01-2020"; empty = fetch full history
+
     # Govmap / Tax Authority scraper
     GOVMAP_BASE_URL: str = "https://www.govmap.gov.il/api"
     GOVMAP_DEAL_TYPE: int = 2               # 2=resale (yad shniya), 1=new construction

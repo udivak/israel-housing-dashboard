@@ -25,6 +25,13 @@ COLUMN_MAP: dict[str, str] = {
     "TREND_FORMAT": "trend_format",
     "city_name": "city",
     "street": "street",
+    # CBS index API field names
+    "percent": "percent_change",
+    "percentYear": "percent_change_annual",
+    "currBase": "current_base",
+    "prevBase": "previous_base",
+    "baseDesc": "base_description",
+    "monthDesc": "month_name_he",
     # Govmap JSON field names
     "dealAmount": "price",
     "dealDate": "transaction_date",
