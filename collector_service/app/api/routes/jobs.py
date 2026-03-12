@@ -15,6 +15,15 @@ def _get_jobs_repo(request: Request) -> JobsRepository:
     return request.app.state.jobs_repo
 
 
+@router.get("/all", response_model=StandardResponse[list[ScrapeJob]])
+async def list_all_jobs(
+    repo: JobsRepository = Depends(_get_jobs_repo),
+) -> StandardResponse[list[ScrapeJob]]:
+    docs = await repo.list_jobs(limit=1000)
+    jobs = [ScrapeJob.model_validate(d) for d in docs]
+    return StandardResponse(success=True, data=jobs)
+
+
 @router.get("/{job_id}", response_model=StandardResponse[ScrapeJob])
 async def get_job(
     job_id: str,

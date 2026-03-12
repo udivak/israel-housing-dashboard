@@ -1,38 +1,14 @@
-import csv
-import hashlib
 import io
-import json
 import zipfile
 from typing import Any, ClassVar
 
 import httpx
+import openpyxl
 
 from app.core.config import Settings, settings
 from app.models.records import RetrievalMethod
+from app.scrapers._utils import content_hash, normalize_row
 from app.scrapers.base import BaseScraper, ScrapeResult
-
-COLUMN_MAP: dict[str, str] = {
-    "תאריך עסקה": "transaction_date",
-    "מחיר": "price",
-    "כתובת": "address",
-    "עיר": "city",
-    "סוג נכס": "property_type",
-    "שכונה": "neighborhood",
-    "חדרים": "rooms",
-    "קומה": "floor",
-    "שטח": "area_sqm",
-    "גוש": "block",
-    "חלקה": "parcel",
-}
-
-
-def _normalize_row(row: dict[str, str]) -> dict[str, Any]:
-    return {COLUMN_MAP.get(k, k): v for k, v in row.items()}
-
-
-def _content_hash(payload: dict[str, Any]) -> str:
-    canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False)
-    return hashlib.sha256(canonical.encode()).hexdigest()
 
 
 class OdataILScraper(BaseScraper):
@@ -48,16 +24,18 @@ class OdataILScraper(BaseScraper):
             f"/resource/{resource_id}/download/.zip"
         )
 
-    # ClassVar must match instance; override via property to keep ClassVar valid.
     @property
     def _source_url(self) -> str:
         return self.source_url
 
     async def fetch(self) -> ScrapeResult:
-        async with httpx.AsyncClient(
-            timeout=self.settings.SCRAPER_REQUEST_TIMEOUT_S,
-            follow_redirects=True,
-        ) as client:
+        timeout = httpx.Timeout(
+            connect=10.0,
+            read=float(self.settings.ODATA_IL_DOWNLOAD_TIMEOUT_S),
+            write=10.0,
+            pool=10.0,
+        )
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
             response = await client.get(self.source_url)
             response.raise_for_status()
             zip_bytes = response.content
@@ -66,25 +44,36 @@ class OdataILScraper(BaseScraper):
         records: list[dict[str, Any]] = []
 
         with zipfile.ZipFile(buffer) as zf:
-            csv_names = [n for n in zf.namelist() if n.lower().endswith(".csv")]
-            if not csv_names:
+            xlsx_names = [n for n in zf.namelist() if n.lower().endswith(".xlsx")]
+            if not xlsx_names:
                 return ScrapeResult(
                     source_name=self.source_name,
                     records=[],
                     status="empty",
-                    error="No CSV file found in ZIP archive",
+                    error="No XLSX file found in ZIP archive",
                 )
-            with zf.open(csv_names[0]) as csv_file:
-                text = csv_file.read().decode("utf-8-sig", errors="replace")
-                reader = csv.DictReader(io.StringIO(text))
-                for row in reader:
-                    normalized = _normalize_row(dict(row))
-                    records.append(
-                        {
-                            "raw_payload": normalized,
-                            "content_hash": _content_hash(normalized),
-                        }
+
+            for xlsx_name in xlsx_names:
+                with zf.open(xlsx_name) as xlsx_file:
+                    wb = openpyxl.load_workbook(
+                        io.BytesIO(xlsx_file.read()), read_only=True, data_only=True
                     )
+                    ws = wb.active
+                    row_iter = ws.iter_rows(values_only=True)
+                    headers = next(row_iter, None)
+                    if not headers:
+                        wb.close()
+                        continue
+                    for row in row_iter:
+                        raw = dict(zip(headers, row))
+                        normalized = normalize_row(raw)
+                        records.append(
+                            {
+                                "raw_payload": normalized,
+                                "content_hash": content_hash(normalized),
+                            }
+                        )
+                    wb.close()
 
         if not records:
             return ScrapeResult(source_name=self.source_name, records=[], status="empty")

@@ -44,3 +44,22 @@ class JobsRepository:
 
     async def find_running_for_source(self, source_name: str) -> Optional[dict[str, Any]]:
         return await self._col.find_one({"source_name": source_name, "status": "running"})
+
+    async def recover_stale_jobs(self) -> int:
+        """Mark any pending/running jobs as failed on service startup.
+
+        Jobs left in a non-terminal state after a crash or forced shutdown
+        would otherwise block new runs indefinitely.  Returns the count of
+        jobs that were recovered.
+        """
+        result = await self._col.update_many(
+            {"status": {"$in": ["pending", "running"]}},
+            {
+                "$set": {
+                    "status": "failed",
+                    "completed_at": datetime.now(UTC),
+                    "error_message": "Recovered on service restart — job interrupted",
+                }
+            },
+        )
+        return result.modified_count

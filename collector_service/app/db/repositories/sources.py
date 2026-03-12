@@ -10,7 +10,7 @@ class SourcesRepository:
     async def upsert(self, source: dict[str, Any]) -> None:
         await self._col.update_one(
             {"name": source["name"]},
-            {"$setOnInsert": source},
+            {"$set": source},
             upsert=True,
         )
 

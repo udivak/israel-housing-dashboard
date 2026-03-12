@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     SERVICE_NAME: str = "collector_service"
     APP_ENV: Literal["development", "staging", "production"] = "development"
     LOG_LEVEL: str = "INFO"
-    API_V1_PREFIX: str = "/api/v1"
+    API_PREFIX: str = "/api"
 
     MONGODB_URI: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "israel_housing"
@@ -20,13 +20,14 @@ class Settings(BaseSettings):
 
     ODATA_IL_RESOURCE_ID: str = "5eb859da-6236-4b67-bcd1-ec4b90875739"
     ODATA_IL_BASE_URL: str = "https://www.odata.org.il"
+    ODATA_IL_DOWNLOAD_TIMEOUT_S: int = 120
 
     # Madlan scraper
     MADLAN_BASE_URL: str = "https://www.madlan.co.il"
     MADLAN_HEADLESS: bool = True
     MADLAN_MAX_PAGES_PER_CITY: int = 10
     MADLAN_CONCURRENCY: int = 1
-    MADLAN_PAGE_TIMEOUT_MS: int = 30000
+    MADLAN_PAGE_TIMEOUT_MS: int = 60000
     MADLAN_REQUEST_DELAY_S: float = 2.0
     MADLAN_DETAIL_CRAWL_ENABLED: bool = True
     MADLAN_USER_AGENT: str = (
@@ -35,7 +36,16 @@ class Settings(BaseSettings):
         "Chrome/124.0.0.0 Safari/537.36"
     )
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    # Govmap / Tax Authority scraper
+    GOVMAP_BASE_URL: str = "https://www.govmap.gov.il/api"
+    GOVMAP_DEAL_TYPE: int = 2               # 2=resale (yad shniya), 1=new construction
+    GOVMAP_RADIUS_M: int = 2000             # polygon search radius per city centre (metres)
+    GOVMAP_PAGE_LIMIT: int = 100            # deals per page
+    GOVMAP_MAX_POLYGONS_PER_CITY: int = 50  # max street polygons queried per city
+    GOVMAP_REQUEST_DELAY_S: float = 0.3     # polite delay between polygon requests
+    GOVMAP_READ_TIMEOUT_S: int = 60
+
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = Settings()

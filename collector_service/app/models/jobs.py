@@ -24,9 +24,13 @@ class PyObjectId(str):
         from pydantic_core import core_schema
 
         return core_schema.no_info_plain_validator_function(
-            lambda v: cls.validate(v),
+            cls.validate,
             serialization=core_schema.plain_serializer_function_ser_schema(str),
         )
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema: Any, handler: Any) -> Any:
+        return {"type": "string"}
 
 
 class JobStatus(StrEnum):
