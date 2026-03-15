@@ -23,6 +23,13 @@ class PaginationParams(BaseModel):
     offset: int = Field(0, ge=0)
 
 
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: list[T]
+    total: int
+    limit: int
+    offset: int
+
+
 class JobAcceptedResponse(BaseModel):
     job_id: str
     message: str = "Job accepted"
