@@ -14,6 +14,12 @@ class JobNotFoundError(Exception):
         super().__init__(f"Job not found: {job_id}")
 
 
+class RecordNotFoundError(Exception):
+    def __init__(self, record_id: str) -> None:
+        self.record_id = record_id
+        super().__init__(f"Record not found: {record_id}")
+
+
 class JobAlreadyRunningError(Exception):
     def __init__(self, source_name: str) -> None:
         self.source_name = source_name
@@ -42,6 +48,10 @@ async def job_not_found_handler(request: Request, exc: JobNotFoundError) -> JSON
     return JSONResponse(status_code=404, content=_error_body("JOB_NOT_FOUND", str(exc)))
 
 
+async def record_not_found_handler(request: Request, exc: RecordNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content=_error_body("RECORD_NOT_FOUND", str(exc)))
+
+
 async def job_already_running_handler(request: Request, exc: JobAlreadyRunningError) -> JSONResponse:
     return JSONResponse(status_code=409, content=_error_body("JOB_ALREADY_RUNNING", str(exc)))
 
@@ -64,6 +74,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 def register_exception_handlers(app) -> None:  # type: ignore[no-untyped-def]
     app.add_exception_handler(SourceNotFoundError, source_not_found_handler)
     app.add_exception_handler(JobNotFoundError, job_not_found_handler)
+    app.add_exception_handler(RecordNotFoundError, record_not_found_handler)
     app.add_exception_handler(JobAlreadyRunningError, job_already_running_handler)
     app.add_exception_handler(DatabaseUnavailableError, database_unavailable_handler)
     app.add_exception_handler(ScraperError, scraper_error_handler)

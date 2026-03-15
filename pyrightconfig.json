@@ -1,0 +1,5 @@
+{
+  "venvPath": "collector_service",
+  "venv": ".venv",
+  "pythonVersion": "3.13"
+}

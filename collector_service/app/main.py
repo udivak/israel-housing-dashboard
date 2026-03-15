@@ -13,6 +13,7 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.db.mongo import close_mongo_connection, connect_to_mongo, create_indexes, get_database
 from app.db.repositories.jobs import JobsRepository
+from app.db.repositories.raw_records import RawRecordsRepository
 from app.services.collection_service import CollectionService
 from app.services.source_registry import SourceRegistry
 
@@ -37,6 +38,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     app.state.source_registry = registry
     app.state.jobs_repo = jobs_repo
+    app.state.raw_records_repo = RawRecordsRepository(db)
     app.state.collection_service = CollectionService(db, registry)
 
     await logger.ainfo("Startup complete")
