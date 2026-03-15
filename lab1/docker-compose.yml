@@ -1,0 +1,32 @@
+services:
+  mongo:
+    image: mongo:7
+    # Port 27017 is intentionally NOT exposed to the host — the lab1_api
+    # container reaches mongo over the internal Docker network.
+    # If you need direct host access (e.g. Compass), change to "27018:27017".
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  lab1_api:
+    build: .
+    ports:
+      - "8001:8000"
+    env_file: .env
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  mongo_data:
