@@ -54,6 +54,14 @@ class Settings(BaseSettings):
     GOVMAP_REQUEST_DELAY_S: float = 0.3     # polite delay between polygon requests
     GOVMAP_READ_TIMEOUT_S: int = 60
 
+    # Nadlan.gov.il scraper (Playwright)
+    NADLAN_HEADLESS: bool = False
+    NADLAN_INITIAL_WAIT_S: float = 5.0
+    NADLAN_PAGE_TIMEOUT_MS: int = 30000
+    NADLAN_MAX_PAGES_PER_CITY: int = 15
+    NADLAN_DELAY_MIN_S: float = 3.0
+    NADLAN_DELAY_MAX_S: float = 6.0
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 

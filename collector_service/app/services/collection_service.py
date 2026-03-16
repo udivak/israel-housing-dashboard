@@ -109,7 +109,7 @@ class CollectionService:
                 )
 
             else:
-                # Batch path for all other scrapers (unchanged behaviour)
+                # Batch path for Madlan, NadlanGov, and all other scrapers
                 result = await scraper.run()
 
                 if result.status == "failed":

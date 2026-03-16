@@ -10,6 +10,7 @@ from app.models.source import SourceDefinition, SourceStatus
 from app.scrapers.base import BaseScraper
 from app.scrapers.cbs import CBSScraper
 from app.scrapers.madlan import MadlanScraper
+from app.scrapers.nadlan_gov import NadlanGovScraper
 from app.scrapers.odata_il import OdataILScraper
 from app.scrapers.tax_authority import TaxAuthorityScraper
 
@@ -20,6 +21,7 @@ _SCRAPER_REGISTRY: dict[str, Type[BaseScraper]] = {
     TaxAuthorityScraper.source_name: TaxAuthorityScraper,
     CBSScraper.source_name: CBSScraper,
     MadlanScraper.source_name: MadlanScraper,
+    NadlanGovScraper.source_name: NadlanGovScraper,
 }
 
 DEFAULT_SOURCES: list[SourceDefinition] = [
@@ -57,6 +59,14 @@ DEFAULT_SOURCES: list[SourceDefinition] = [
         status=SourceStatus.ACTIVE,
         source_url="https://www.madlan.co.il/for-sale/ישראל",
         tags=["real-estate", "listings", "madlan", "for-sale"],
+    ),
+    SourceDefinition(
+        name="nadlan_gov",
+        display_name="Nadlan.gov.il — Tax Authority Transactions",
+        description="Real estate transactions from the Israeli Tax Authority website (nadlan.gov.il)",
+        status=SourceStatus.ACTIVE,
+        source_url="https://www.nadlan.gov.il/",
+        tags=["real-estate", "transactions", "tax-authority", "nadlan"],
     ),
 ]
 

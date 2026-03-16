@@ -12,8 +12,7 @@ FROM python:3.12-slim
 
 RUN addgroup --system app && adduser --system --ingroup app app
 
-# Install Chromium system library dependencies required by Playwright.
-# These are the libraries that Chromium links against at runtime.
+# Install Chromium system library dependencies and Xvfb for headless=False.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libnss3 \
     libatk1.0-0 \
@@ -28,6 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2 \
     libpango-1.0-0 \
     libcairo2 \
+    xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -48,4 +48,4 @@ USER app
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1280x720x24", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

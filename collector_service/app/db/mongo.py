@@ -16,12 +16,14 @@ _db: Optional[AsyncDatabase] = None
 
 async def connect_to_mongo() -> None:
     global _client, _db
-    _client = AsyncMongoClient(
-        settings.MONGODB_URI,
-        connectTimeoutMS=settings.MONGODB_CONNECT_TIMEOUT_MS,
-        serverSelectionTimeoutMS=settings.MONGODB_SERVER_SELECTION_TIMEOUT_MS,
-        tlsCAFile=certifi.where(),
-    )
+    kwargs: dict = {
+        "connectTimeoutMS": settings.MONGODB_CONNECT_TIMEOUT_MS,
+        "serverSelectionTimeoutMS": settings.MONGODB_SERVER_SELECTION_TIMEOUT_MS,
+    }
+    # TLS only for mongodb+srv (Atlas); local mongo uses plain TCP
+    if "mongodb+srv://" in settings.MONGODB_URI:
+        kwargs["tlsCAFile"] = certifi.where()
+    _client = AsyncMongoClient(settings.MONGODB_URI, **kwargs)
     _db = _client[settings.MONGODB_DB_NAME]
     await logger.ainfo("Connected to MongoDB", db=settings.MONGODB_DB_NAME)
 
