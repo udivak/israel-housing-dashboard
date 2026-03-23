@@ -6,6 +6,7 @@ __pycache__/
 # C extensions
 *.so
 
+collector_service/parcel_all
 # Distribution / packaging
 .Python
 build/
