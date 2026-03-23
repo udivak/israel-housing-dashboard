@@ -1,0 +1,151 @@
+{
+    "cbs_housing": {
+      "type": "time_series_index",
+      "top_level_fields": {
+        "source_name": "string",
+        "source_url": "string",
+        "ingested_at": "date",
+        "retrieval_method": "string",
+        "parsing_status": "string",
+        "content_hash": "string",
+        "schema_version": "string",
+        "job_id": "string",
+        "tags": "array"
+      },
+      "raw_payload": {
+        "series_code": "number",
+        "series_name": "string",
+        "period_type": "string",
+        "year": "number",
+        "quarter": "number",
+        "quarterDesc": "string",
+        "percent_change": "number",
+        "percent_change_annual": "number",
+        "current_base": "number",
+        "previous_base": "number|null",
+        "base_description": "string",
+        "source": "string"
+      }
+    },
+    "nadlan_gov": {
+      "type": "real_estate_transaction",
+      "top_level_fields": {
+        "source_name": "string",
+        "ingested_at": "date",
+        "content_hash": "string",
+        "geometry": {
+          "type": "Point",
+          "coordinates": "[longitude, latitude]"
+        }
+      },
+      "raw_payload": {
+        "assetId": "number",
+        "addressId": "number",
+        "polygonId": "string",
+        "neighborhoodName": "string|null",
+        "neighborhoodId": "number",
+        "address": "string",
+        "dealDate": "date|string",
+        "dealAmount": "number",
+        "parcelNum": "string",
+        "dealNature": "string",
+        "roomNum": "number",
+        "floor": "number|null",
+        "assetArea": "number",
+        "yearBuilt": "number",
+        "streetCode": "number",
+        "settlmentID": "number",
+        "buildingFloors": "number",
+        "hokHamecher": "number",
+        "trend": {
+          "rate": "number",
+          "years": "number"
+        },
+        "prevDeals": "array",
+        "ownership": "array",
+        "priceSM": "number",
+        "row_id": "number"
+      }
+    },
+    "odata_il_nadlan": {
+      "type": "real_estate_transaction",
+      "top_level_fields": {
+        "source_name": "string",
+        "source_url": "string",
+        "ingested_at": "date",
+        "retrieval_method": "string",
+        "parsing_status": "string",
+        "content_hash": "string",
+        "schema_version": "string",
+        "job_id": "string",
+        "tags": "array",
+        "geometry": {
+          "type": "Point",
+          "coordinates": "[longitude, latitude]"
+        }
+      },
+      "raw_payload": {
+        "transaction_date": "string",
+        "transaction_datetime": "date",
+        "full_address": "string",
+        "display_address": "string",
+        "block": "string",
+        "property_type": "string",
+        "rooms": "string|number",
+        "floor": "string",
+        "DEALNATURE": "string",
+        "price": "string",
+        "new_project_text": "string|null",
+        "project_name": "string|null",
+        "building_year": "string",
+        "year_built": "number|null",
+        "building_floors": "string",
+        "key_value": "string",
+        "type": "number",
+        "polygon_id": "string",
+        "trend_is_negative": "boolean",
+        "trend_format": "string",
+        "city": "string",
+        "street": "string"
+      }
+    },
+    "tax_authority_nadlan": {
+      "type": "real_estate_transaction",
+      "top_level_fields": {
+        "source_name": "string",
+        "source_url": "string",
+        "ingested_at": "date",
+        "retrieval_method": "string",
+        "parsing_status": "string",
+        "content_hash": "string",
+        "schema_version": "string",
+        "job_id": "string",
+        "tags": "array"
+      },
+      "raw_payload": {
+        "object_id": "number",
+        "dealId": "number",
+        "settlementId": "number",
+        "settlementNameHeb": "string",
+        "settlementNameEng": "string|null",
+        "streetCode": "number|null",
+        "streetNameHeb": "string|null",
+        "streetNameEng": "string|null",
+        "houseNum": "number|null",
+        "floorNo": "string",
+        "area_sqm": "number",
+        "price": "number",
+        "property_type": "string",
+        "rooms": "number",
+        "neighborhood": "string",
+        "transaction_date": "date",
+        "gushNum": "number",
+        "parcelNum": "number",
+        "subParcelNum": "number",
+        "polygon_id": "string",
+        "shape": "string (MULTIPOLYGON)",
+        "sourceorder": "number",
+        "source": "string"
+      }
+    }
+  }
