@@ -8,7 +8,7 @@ from tqdm import tqdm
 load_dotenv()
 
 MONGO_URI = os.getenv("MONGODB_URI")
-DB_NAME = os.getenv("MONGODB_DB_NAME")
+DB_NAME = os.getenv("MONGODB_DB_NAME", "")
 COLLECTION = "raw_records"
 
 PARCEL_PATH = "parcel_all/PARCEL_ALL.shp"
@@ -64,12 +64,12 @@ for row in tqdm(centroids.itertuples(), total=len(centroids)):
 
     try:
 
-        gush = str(int(row.GUSH_NUM))
-        parcel = str(int(row.PARCEL))
+        gush = str(int(getattr(row, "GUSH_NUM")))
+        parcel = str(int(getattr(row, "PARCEL")))
 
         key = f"{gush}-{parcel}"
 
-        point = row.centroid
+        point = getattr(row, "centroid")
 
         parcel_map[key] = (point.x, point.y)
 

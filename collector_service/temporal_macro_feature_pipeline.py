@@ -12,8 +12,8 @@ from tqdm import tqdm
 
 load_dotenv()
 
-MONGO_URI = os.getenv("MONGODB_URI")
-DB_NAME = os.getenv("MONGODB_DB_NAME")
+MONGO_URI = os.getenv("MONGODB_URI", "")
+DB_NAME = os.getenv("MONGODB_DB_NAME", "")
 
 OUTPUT_FILE = "temporal_features.xlsx"
 
