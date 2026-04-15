@@ -6,12 +6,11 @@ from dotenv import load_dotenv
 
 import geopandas as gpd
 import pandas as pd
-from pymongo import MongoClient, UpdateOne
+from pymongo import MongoClient
 from shapely.geometry import Point
 from shapely.ops import nearest_points
 from pyproj import Transformer
 from tqdm import tqdm
-import pandas as pd
 
 
 # =========================================================
@@ -23,9 +22,9 @@ load_dotenv()
 MONGO_URI = os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("MONGODB_DB_NAME", "your_db")
 RAW_COLLECTION = os.getenv("MONGODB_RAW_COLLECTION", "raw_records")
-FEATURES_COLLECTION = os.getenv("MONGODB_FEATURES_COLLECTION", "features_osm")
 
-DATA_DIR = os.getenv("OSM_DATA_DIR", "/Users/moses/Desktop/israel-and-palestine-260310-free.shp")
+DATA_DIR = os.getenv("OSM_DATA_DIR")
+FEATURES_OUTPUT_CSV = os.getenv("FEATURES_OUTPUT_CSV", "features_osm.csv")
 
 BATCH_SIZE = int(os.getenv("FEATURE_BATCH_SIZE", "500"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -40,7 +39,7 @@ SOURCE_CRS = "EPSG:4326"
 
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
-    format="%(asctime)s | %(levelname)s | %(message)s"
+    format="%(asctime)s | %(levelname)s | %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -93,6 +92,9 @@ BUILDING_PUBLIC_TYPES = ["school", "kindergarten", "university", "office", "comm
 if not MONGO_URI:
     raise ValueError("Missing MONGODB_URI environment variable")
 
+if not DATA_DIR:
+    raise ValueError("Missing OSM_DATA_DIR environment variable (directory containing OSM shapefiles)")
+
 if not os.path.isdir(DATA_DIR):
     raise ValueError(f"OSM_DATA_DIR does not exist or is not a directory: {DATA_DIR}")
 
@@ -104,7 +106,6 @@ if not os.path.isdir(DATA_DIR):
 client = MongoClient(MONGO_URI)
 db = client[DB_NAME]
 raw_col = db[RAW_COLLECTION]
-features_col = db[FEATURES_COLLECTION]
 
 
 # =========================================================
@@ -113,31 +114,28 @@ features_col = db[FEATURES_COLLECTION]
 
 transformer = Transformer.from_crs(SOURCE_CRS, TARGET_CRS, always_xy=True)
 
+GRID_SIZE = 20  # meters
 
-GRID_SIZE = 20  # מטרים (אפשר לשנות ל-50 / 200)
 
-
-from pyproj import Transformer
-
-transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
-
-def to_3857(point):
+def to_3857(point: Point) -> Point:
     x, y = transformer.transform(point.x, point.y)
     return Point(x, y)
 
-def get_point(doc):
+
+def get_point(doc: Dict[str, Any]) -> Optional[Point]:
     coords = doc.get("geometry", {}).get("coordinates")
     if not coords:
         return None
     return Point(coords)
 
-def grid_key(point):
+
+def grid_key(point: Point) -> str:
     x = int(point.x // GRID_SIZE)
     y = int(point.y // GRID_SIZE)
     return f"{x}_{y}"
 
 
-feature_cache = {}
+feature_cache: Dict[str, Dict[str, Any]] = {}
 
 
 def safe_div(a: float, b: float) -> float:
@@ -270,12 +268,7 @@ def intersects_buffer(point: Point, prepared: Dict[str, Any], radius: float) -> 
     return int(subset.intersects(buf).any())
 
 
-def count_unique_values_nearby(
-    point: Point,
-    prepared: Dict[str, Any],
-    radius: float,
-    column: str
-) -> int:
+def count_unique_values_nearby(point: Point, prepared: Dict[str, Any], radius: float, column: str) -> int:
     subset = subset_by_buffer(prepared, point, radius)
     if subset.empty or column not in subset.columns:
         return 0
@@ -283,137 +276,119 @@ def count_unique_values_nearby(
     return int(subset[column].dropna().nunique())
 
 
-# =========================================================
-# LOAD BASE LAYERS
-# =========================================================
+def _load_prepared_layers() -> Dict[str, Any]:
+    logger.info("Loading OSM layers...")
 
-logger.info("Loading OSM layers...")
+    layers = {
+        "roads": load_layer("gis_osm_roads_free_1.shp"),
+        "water": load_layer("gis_osm_water_a_free_1.shp"),
+        "natural_a": load_layer("gis_osm_natural_a_free_1.shp"),
+        "natural": load_layer("gis_osm_natural_free_1.shp"),
+        "pois": load_layer("gis_osm_pois_free_1.shp"),
+        "pois_a": load_layer("gis_osm_pois_a_free_1.shp"),
+        "buildings": load_layer("gis_osm_buildings_a_free_1.shp"),
+        "transport": load_layer("gis_osm_transport_free_1.shp"),
+        "transport_a": load_layer("gis_osm_transport_a_free_1.shp"),
+        "landuse": load_layer("gis_osm_landuse_a_free_1.shp"),
+        "railways": load_layer("gis_osm_railways_free_1.shp"),
+        "traffic": load_layer("gis_osm_traffic_free_1.shp"),
+        "traffic_a": load_layer("gis_osm_traffic_a_free_1.shp"),
+        "waterways": load_layer("gis_osm_waterways_free_1.shp"),
+        "pofw": load_layer("gis_osm_pofw_free_1.shp"),
+        "pofw_a": load_layer("gis_osm_pofw_a_free_1.shp"),
+        "places": load_layer("gis_osm_places_free_1.shp"),
+        "places_a": load_layer("gis_osm_places_a_free_1.shp"),
+    }
 
-layers = {
-    "roads": load_layer("gis_osm_roads_free_1.shp"),
-    "water": load_layer("gis_osm_water_a_free_1.shp"),
-    "natural_a": load_layer("gis_osm_natural_a_free_1.shp"),
-    "natural": load_layer("gis_osm_natural_free_1.shp"),
-    "pois": load_layer("gis_osm_pois_free_1.shp"),
-    "pois_a": load_layer("gis_osm_pois_a_free_1.shp"),
-    "buildings": load_layer("gis_osm_buildings_a_free_1.shp"),
-    "transport": load_layer("gis_osm_transport_free_1.shp"),
-    "transport_a": load_layer("gis_osm_transport_a_free_1.shp"),
-    "landuse": load_layer("gis_osm_landuse_a_free_1.shp"),
-    "railways": load_layer("gis_osm_railways_free_1.shp"),
-    "traffic": load_layer("gis_osm_traffic_free_1.shp"),
-    "traffic_a": load_layer("gis_osm_traffic_a_free_1.shp"),
-    "waterways": load_layer("gis_osm_waterways_free_1.shp"),
-    "pofw": load_layer("gis_osm_pofw_free_1.shp"),
-    "pofw_a": load_layer("gis_osm_pofw_a_free_1.shp"),
-    "places": load_layer("gis_osm_places_free_1.shp"),
-    "places_a": load_layer("gis_osm_places_a_free_1.shp"),
-}
+    logger.info("Preparing filtered layers...")
+    prepared = {
+        # base
+        "roads_all": prepare_gdf(layers["roads"]),
+        "water_all": prepare_gdf(layers["water"]),
+        "natural_a_all": prepare_gdf(layers["natural_a"]),
+        "natural_all": prepare_gdf(layers["natural"]),
+        "pois_all": prepare_gdf(layers["pois"]),
+        "pois_a_all": prepare_gdf(layers["pois_a"]),
+        "buildings_all": prepare_gdf(layers["buildings"]),
+        "transport_all": prepare_gdf(layers["transport"]),
+        "transport_a_all": prepare_gdf(layers["transport_a"]),
+        "landuse_all": prepare_gdf(layers["landuse"]),
+        "railways_all": prepare_gdf(layers["railways"]),
+        "traffic_all": prepare_gdf(layers["traffic"]),
+        "traffic_a_all": prepare_gdf(layers["traffic_a"]),
+        "waterways_all": prepare_gdf(layers["waterways"]),
+        "pofw_all": prepare_gdf(layers["pofw"]),
+        "pofw_a_all": prepare_gdf(layers["pofw_a"]),
+        "places_all": prepare_gdf(layers["places"]),
+        "places_a_all": prepare_gdf(layers["places_a"]),
 
-logger.info("Loaded all layers.")
+        # roads
+        "roads_main": prepare_gdf(filter_fclass(layers["roads"], MAIN_ROADS)),
+        "roads_secondary": prepare_gdf(filter_fclass(layers["roads"], SECONDARY_ROADS)),
+        "roads_local": prepare_gdf(filter_fclass(layers["roads"], LOCAL_ROADS)),
 
+        # nature / water
+        "beaches": prepare_gdf(filter_fclass(layers["natural_a"], BEACH_CLASSES)),
+        "water_polygons": prepare_gdf(filter_fclass(layers["water"], WATER_CLASSES)),
+        "rivers_streams": prepare_gdf(filter_fclass(layers["waterways"], RIVER_CLASSES)),
 
-# =========================================================
-# PREPARE FILTERED LAYERS ONCE
-# =========================================================
+        # POI
+        "parks": prepare_gdf(filter_fclass(layers["pois_a"], PARK_CLASSES)),
+        "restaurants": prepare_gdf(filter_fclass(layers["pois"], RESTAURANT_CLASSES)),
+        "shops": prepare_gdf(filter_fclass(layers["pois"], SHOP_CLASSES)),
+        "schools": prepare_gdf(filter_fclass(layers["pois"], SCHOOL_CLASSES)),
+        "kindergartens": prepare_gdf(filter_fclass(layers["pois"], KINDERGARTEN_CLASSES)),
+        "playgrounds": prepare_gdf(filter_fclass(layers["pois"], PLAYGROUND_CLASSES)),
+        "pharmacies": prepare_gdf(filter_fclass(layers["pois"], PHARMACY_CLASSES)),
+        "public_buildings": prepare_gdf(filter_fclass(layers["pois"], PUBLIC_BUILDING_CLASSES)),
+        "attractions": prepare_gdf(filter_fclass(layers["pois"], ATTRACTION_CLASSES)),
 
-logger.info("Preparing filtered layers...")
+        # transport
+        "bus_stops": prepare_gdf(filter_fclass(layers["transport"], TRANSPORT_BUS_STOP)),
+        "rail_stations": prepare_gdf(filter_fclass(layers["transport"], TRANSPORT_RAIL_STATION)),
+        "bus_stations": prepare_gdf(filter_fclass(layers["transport_a"], TRANSPORT_BUS_STATION)),
 
-prepared = {
-    # base
-    "roads_all": prepare_gdf(layers["roads"]),
-    "water_all": prepare_gdf(layers["water"]),
-    "natural_a_all": prepare_gdf(layers["natural_a"]),
-    "natural_all": prepare_gdf(layers["natural"]),
-    "pois_all": prepare_gdf(layers["pois"]),
-    "pois_a_all": prepare_gdf(layers["pois_a"]),
-    "buildings_all": prepare_gdf(layers["buildings"]),
-    "transport_all": prepare_gdf(layers["transport"]),
-    "transport_a_all": prepare_gdf(layers["transport_a"]),
-    "landuse_all": prepare_gdf(layers["landuse"]),
-    "railways_all": prepare_gdf(layers["railways"]),
-    "traffic_all": prepare_gdf(layers["traffic"]),
-    "traffic_a_all": prepare_gdf(layers["traffic_a"]),
-    "waterways_all": prepare_gdf(layers["waterways"]),
-    "pofw_all": prepare_gdf(layers["pofw"]),
-    "pofw_a_all": prepare_gdf(layers["pofw_a"]),
-    "places_all": prepare_gdf(layers["places"]),
-    "places_a_all": prepare_gdf(layers["places_a"]),
+        # landuse
+        "green_landuse": prepare_gdf(filter_fclass(layers["landuse"], GREEN_LANDUSE)),
+        "industrial_landuse": prepare_gdf(filter_fclass(layers["landuse"], INDUSTRIAL_LANDUSE)),
+        "commercial_landuse": prepare_gdf(filter_fclass(layers["landuse"], COMMERCIAL_LANDUSE)),
+        "residential_landuse": prepare_gdf(filter_fclass(layers["landuse"], RESIDENTIAL_LANDUSE)),
 
-    # roads
-    "roads_main": prepare_gdf(filter_fclass(layers["roads"], MAIN_ROADS)),
-    "roads_secondary": prepare_gdf(filter_fclass(layers["roads"], SECONDARY_ROADS)),
-    "roads_local": prepare_gdf(filter_fclass(layers["roads"], LOCAL_ROADS)),
+        # traffic
+        "parking_points": prepare_gdf(filter_fclass(layers["traffic"], TRAFFIC_PARKING)),
+        "parking_areas": prepare_gdf(filter_fclass(layers["traffic_a"], TRAFFIC_PARKING)),
+        "traffic_signals": prepare_gdf(filter_fclass(layers["traffic"], TRAFFIC_SIGNALS)),
+        "fuel_points": prepare_gdf(filter_fclass(layers["traffic"], FUEL_CLASSES)),
 
-    # nature / water
-    "beaches": prepare_gdf(filter_fclass(layers["natural_a"], BEACH_CLASSES)),
-    "water_polygons": prepare_gdf(filter_fclass(layers["water"], WATER_CLASSES)),
-    "rivers_streams": prepare_gdf(filter_fclass(layers["waterways"], RIVER_CLASSES)),
+        # religion/community
+        "pofw_jewish_points": prepare_gdf(filter_fclass(layers["pofw"], POFW_JEWISH)),
+        "pofw_jewish_polygons": prepare_gdf(filter_fclass(layers["pofw_a"], POFW_JEWISH)),
 
-    # POI
-    "parks": prepare_gdf(filter_fclass(layers["pois_a"], PARK_CLASSES)),
-    "restaurants": prepare_gdf(filter_fclass(layers["pois"], RESTAURANT_CLASSES)),
-    "shops": prepare_gdf(filter_fclass(layers["pois"], SHOP_CLASSES)),
-    "schools": prepare_gdf(filter_fclass(layers["pois"], SCHOOL_CLASSES)),
-    "kindergartens": prepare_gdf(filter_fclass(layers["pois"], KINDERGARTEN_CLASSES)),
-    "playgrounds": prepare_gdf(filter_fclass(layers["pois"], PLAYGROUND_CLASSES)),
-    "pharmacies": prepare_gdf(filter_fclass(layers["pois"], PHARMACY_CLASSES)),
-    "public_buildings": prepare_gdf(filter_fclass(layers["pois"], PUBLIC_BUILDING_CLASSES)),
-    "attractions": prepare_gdf(filter_fclass(layers["pois"], ATTRACTION_CLASSES)),
-
-    # transport
-    "bus_stops": prepare_gdf(filter_fclass(layers["transport"], TRANSPORT_BUS_STOP)),
-    "rail_stations": prepare_gdf(filter_fclass(layers["transport"], TRANSPORT_RAIL_STATION)),
-    "bus_stations": prepare_gdf(filter_fclass(layers["transport_a"], TRANSPORT_BUS_STATION)),
-
-    # landuse
-    "green_landuse": prepare_gdf(filter_fclass(layers["landuse"], GREEN_LANDUSE)),
-    "industrial_landuse": prepare_gdf(filter_fclass(layers["landuse"], INDUSTRIAL_LANDUSE)),
-    "commercial_landuse": prepare_gdf(filter_fclass(layers["landuse"], COMMERCIAL_LANDUSE)),
-    "residential_landuse": prepare_gdf(filter_fclass(layers["landuse"], RESIDENTIAL_LANDUSE)),
-
-    # traffic
-    "parking_points": prepare_gdf(filter_fclass(layers["traffic"], TRAFFIC_PARKING)),
-    "parking_areas": prepare_gdf(filter_fclass(layers["traffic_a"], TRAFFIC_PARKING)),
-    "traffic_signals": prepare_gdf(filter_fclass(layers["traffic"], TRAFFIC_SIGNALS)),
-    "fuel_points": prepare_gdf(filter_fclass(layers["traffic"], FUEL_CLASSES)),
-
-    # religion/community
-    "pofw_jewish_points": prepare_gdf(filter_fclass(layers["pofw"], POFW_JEWISH)),
-    "pofw_jewish_polygons": prepare_gdf(filter_fclass(layers["pofw_a"], POFW_JEWISH)),
-
-    # buildings
-    "building_residential_types": prepare_gdf(filter_type(layers["buildings"], BUILDING_RESIDENTIAL_TYPES)),
-    "building_public_types": prepare_gdf(filter_type(layers["buildings"], BUILDING_PUBLIC_TYPES)),
-}
-
-logger.info("Prepared filtered layers.")
+        # buildings
+        "building_residential_types": prepare_gdf(filter_type(layers["buildings"], BUILDING_RESIDENTIAL_TYPES)),
+        "building_public_types": prepare_gdf(filter_type(layers["buildings"], BUILDING_PUBLIC_TYPES)),
+    }
+    logger.info("Prepared filtered layers.")
+    return prepared
 
 
-# =========================================================
-# FEATURE EXTRACTION
-# =========================================================
+prepared = _load_prepared_layers()
 
 
-
-
-def extract_features_cached(doc):
+def extract_features_cached(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     point = get_point(doc)
     if not point:
         return None
 
-    point = to_3857(point)
-
-    key = grid_key(point)
+    point_3857 = to_3857(point)
+    key = grid_key(point_3857)
 
     if key in feature_cache:
         cached = feature_cache[key].copy()
         cached["_id"] = doc["_id"]
         return cached
 
-    # חישוב רגיל
     features = extract_features(doc)
-
     if features:
         feature_cache[key] = features.copy()
 
@@ -425,9 +400,7 @@ def extract_features(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if point is None:
         return None
 
-    # -------------------------
     # Distance features
-    # -------------------------
     dist_to_water = distance_to(point, prepared["water_polygons"])
     dist_to_beach = distance_to(point, prepared["beaches"])
     dist_to_river = distance_to(point, prepared["rivers_streams"])
@@ -443,9 +416,7 @@ def extract_features(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     dist_to_supermarket = distance_to(point, prepared["shops"])
     dist_to_bus_station = distance_to(point, prepared["bus_stations"])
 
-    # -------------------------
     # Radius/count features
-    # -------------------------
     num_pois_300m = count_nearby(point, prepared["pois_all"], 300)
     num_pois_1km = count_nearby(point, prepared["pois_all"], 1000)
     num_restaurants_500m = count_nearby(point, prepared["restaurants"], 500)
@@ -460,14 +431,11 @@ def extract_features(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     num_traffic_signals_300m = count_nearby(point, prepared["traffic_signals"], 300)
     num_parking_points_500m = count_nearby(point, prepared["parking_points"], 500)
     num_fuel_1km = count_nearby(point, prepared["fuel_points"], 1000)
-    num_synagogues_1km = (
-        count_nearby(point, prepared["pofw_jewish_points"], 1000) +
-        count_nearby(point, prepared["pofw_jewish_polygons"], 1000)
+    num_synagogues_1km = count_nearby(point, prepared["pofw_jewish_points"], 1000) + count_nearby(
+        point, prepared["pofw_jewish_polygons"], 1000
     )
 
-    # -------------------------
     # Spatial / area features
-    # -------------------------
     green_ratio_1km = area_ratio_within(point, prepared["green_landuse"], 1000)
     building_density_200m = area_ratio_within(point, prepared["buildings_all"], 200)
     parking_area_ratio_500m = area_ratio_within(point, prepared["parking_areas"], 500)
@@ -476,18 +444,14 @@ def extract_features(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     residential_ratio_1km = area_ratio_within(point, prepared["residential_landuse"], 1000)
     water_ratio_1km = area_ratio_within(point, prepared["water_polygons"], 1000)
 
-    # -------------------------
     # Boolean/proxy features
-    # -------------------------
     is_industrial_near_500m = intersects_buffer(point, prepared["industrial_landuse"], 500)
     is_commercial_near_300m = intersects_buffer(point, prepared["commercial_landuse"], 300)
     is_residential_near_100m = intersects_buffer(point, prepared["residential_landuse"], 100)
     is_park_near_300m = intersects_buffer(point, prepared["parks"], 300)
     is_water_near_300m = intersects_buffer(point, prepared["water_polygons"], 300)
 
-    # -------------------------
     # Urban form / network proxies
-    # -------------------------
     road_length_main_1km = total_length_within(point, prepared["roads_main"], 1000)
     road_length_all_1km = total_length_within(point, prepared["roads_all"], 1000)
     rail_length_1km = total_length_within(point, prepared["railways_all"], 1000)
@@ -499,29 +463,22 @@ def extract_features(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
     unique_poi_types_1km = count_unique_values_nearby(point, prepared["pois_all"], 1000, "fclass")
 
-    # -------------------------
     # Composite scores
-    # -------------------------
     walkability_score = num_restaurants_500m + num_shops_500m + num_pharmacies_1km + num_playgrounds_500m
     education_score = num_schools_1km + num_kindergartens_1km
-    accessibility_score = (
-        safe_div(1.0, (dist_to_bus_stop or 1.0) + 1.0) +
-        safe_div(1.0, (dist_to_main_road or 1.0) + 1.0) +
-        safe_div(1.0, (dist_to_rail_station or 1.0) + 1.0)
-    )
+    accessibility_score = safe_div(1.0, (dist_to_bus_stop or 1.0) + 1.0) + safe_div(
+        1.0, (dist_to_main_road or 1.0) + 1.0
+    ) + safe_div(1.0, (dist_to_rail_station or 1.0) + 1.0)
     amenity_diversity_score = unique_poi_types_1km
     green_score = (green_ratio_1km * 100.0) + num_parks_1km + (1 if is_park_near_300m else 0)
 
-    # -------------------------
     # Optional transforms
-    # -------------------------
     log_dist_to_beach = safe_log1p(dist_to_beach) if dist_to_beach is not None else None
     log_dist_to_main_road = safe_log1p(dist_to_main_road) if dist_to_main_road is not None else None
     log_num_buildings_300m = safe_log1p(num_buildings_300m)
 
     return {
         "_id": doc["_id"],
-
         # distance
         "dist_to_water": dist_to_water,
         "dist_to_beach": dist_to_beach,
@@ -537,7 +494,6 @@ def extract_features(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "dist_to_kindergarten": dist_to_kindergarten,
         "dist_to_supermarket": dist_to_supermarket,
         "dist_to_bus_station": dist_to_bus_station,
-
         # counts
         "num_pois_300m": num_pois_300m,
         "num_pois_1km": num_pois_1km,
@@ -554,7 +510,6 @@ def extract_features(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "num_parking_points_500m": num_parking_points_500m,
         "num_fuel_1km": num_fuel_1km,
         "num_synagogues_1km": num_synagogues_1km,
-
         # area / ratios
         "green_ratio_1km": green_ratio_1km,
         "building_density_200m": building_density_200m,
@@ -563,14 +518,12 @@ def extract_features(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "commercial_ratio_1km": commercial_ratio_1km,
         "residential_ratio_1km": residential_ratio_1km,
         "water_ratio_1km": water_ratio_1km,
-
         # booleans
         "is_industrial_near_500m": is_industrial_near_500m,
         "is_commercial_near_300m": is_commercial_near_300m,
         "is_residential_near_100m": is_residential_near_100m,
         "is_park_near_300m": is_park_near_300m,
         "is_water_near_300m": is_water_near_300m,
-
         # urban/network
         "road_length_main_1km": road_length_main_1km,
         "road_length_all_1km": road_length_all_1km,
@@ -580,42 +533,24 @@ def extract_features(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "num_residential_buildings_300m": num_residential_buildings_300m,
         "num_public_buildings_500m": num_public_buildings_500m,
         "unique_poi_types_1km": unique_poi_types_1km,
-
         # composite
         "walkability_score": walkability_score,
         "education_score": education_score,
         "accessibility_score": accessibility_score,
         "amenity_diversity_score": amenity_diversity_score,
         "green_score": green_score,
-
         # transformed
         "log_dist_to_beach": log_dist_to_beach,
         "log_dist_to_main_road": log_dist_to_main_road,
         "log_num_buildings_300m": log_num_buildings_300m,
-
         # metadata
         "feature_source": "osm",
-        "feature_version": "v1"
+        "feature_version": "v1",
     }
 
 
-# =========================================================
-# INDEXES
-# =========================================================
-
-def ensure_indexes() -> None:
-    features_col.create_index("feature_version")
-    logger.info("Ensured indexes on features collection.")
-
-
-# =========================================================
-# MAIN
-# =========================================================
-
-def run():
-
-    all_features = []
-    ensure_indexes()
+def run() -> None:
+    all_features: List[Dict[str, Any]] = []
 
     total = raw_col.count_documents({})
     batch_size = 50_000
@@ -625,32 +560,22 @@ def run():
     for offset in range(0, total, batch_size):
         print(f"\nProcessing batch {offset} - {offset + batch_size}")
 
-        docs = list(
-            raw_col.find(
-                {},
-                {"_id": 1, "geometry": 1}
-            ).skip(offset).limit(batch_size)
-        )
-
-        ops = []
+        docs = list(raw_col.find({}, {"_id": 1, "geometry": 1}).skip(offset).limit(batch_size))
 
         for doc in tqdm(docs, desc=f"Batch {offset}"):
             try:
                 features = extract_features_cached(doc)
                 if not features:
                     continue
-
                 all_features.append(features)
-
             except Exception as e:
                 print(f"Error on {doc.get('_id')}: {e}")
 
     df = pd.DataFrame(all_features)
-
-    df.to_csv("features_osm.csv", index=False)
-
-    print("✅ Saved features to CSV")
+    df.to_csv(FEATURES_OUTPUT_CSV, index=False)
+    print(f"✅ Saved features to CSV → {FEATURES_OUTPUT_CSV}")
 
 
 if __name__ == "__main__":
     run()
+

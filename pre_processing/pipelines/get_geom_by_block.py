@@ -8,10 +8,10 @@ from tqdm import tqdm
 load_dotenv()
 
 MONGO_URI = os.getenv("MONGODB_URI")
-DB_NAME = os.getenv("MONGODB_DB_NAME", "")
-COLLECTION = "raw_records"
+DB_NAME = os.getenv("MONGODB_DB_NAME")
+COLLECTION = os.getenv("MONGODB_RAW_COLLECTION", "raw_records")
 
-PARCEL_PATH = "parcel_all/PARCEL_ALL.shp"
+PARCEL_PATH = os.getenv("PARCEL_PATH", "parcel_all/PARCEL_ALL.shp")
 
 BATCH_SIZE = 1000
 
@@ -61,19 +61,17 @@ print("building lookup map...")
 parcel_map = {}
 
 for row in tqdm(centroids.itertuples(), total=len(centroids)):
-
     try:
-
-        gush = str(int(getattr(row, "GUSH_NUM")))
-        parcel = str(int(getattr(row, "PARCEL")))
+        gush = str(int(row.GUSH_NUM))
+        parcel = str(int(row.PARCEL))
 
         key = f"{gush}-{parcel}"
 
-        point = getattr(row, "centroid")
+        point = row.centroid
 
         parcel_map[key] = (point.x, point.y)
 
-    except:
+    except Exception:
         continue
 
 
@@ -84,16 +82,14 @@ print("parcel map size:", len(parcel_map))
 # helper function
 # -----------------------------
 
-def extract_parcel_key(doc):
 
+def extract_parcel_key(doc):
     payload = doc.get("raw_payload", {})
     source = doc.get("source_name")
 
     try:
-
         # ---------- nadlan.gov ----------
         if source == "nadlan_gov":
-
             parcel_num = payload.get("parcelNum")
 
             if parcel_num:
@@ -120,7 +116,7 @@ def extract_parcel_key(doc):
         if polygon and "-" in polygon:
             return polygon
 
-    except:
+    except Exception:
         pass
 
     return None
@@ -130,15 +126,13 @@ def extract_parcel_key(doc):
 # query records
 # -----------------------------
 
-query = {
-    "geometry": {"$exists": False}
-}
+query = {"geometry": {"$exists": False}}
 
 projection = {
     "raw_payload.block": 1,
     "raw_payload.parcelNum": 1,
     "raw_payload.polygonId": 1,
-    "source_name": 1
+    "source_name": 1,
 }
 
 total = collection.count_documents(query)
@@ -156,7 +150,6 @@ batch = []
 missing = set()
 
 for doc in tqdm(cursor, total=total):
-
     key = extract_parcel_key(doc)
 
     if not key:
@@ -175,15 +168,14 @@ for doc in tqdm(cursor, total=total):
                 "$set": {
                     "geometry": {
                         "type": "Point",
-                        "coordinates": list(coords)
+                        "coordinates": list(coords),
                     }
                 }
-            }
+            },
         )
     )
 
     if len(batch) >= BATCH_SIZE:
-
         collection.bulk_write(batch)
         batch = []
 
@@ -194,3 +186,4 @@ if batch:
 
 print("done")
 print("missing parcels:", len(missing))
+

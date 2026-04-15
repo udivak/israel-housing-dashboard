@@ -81,5 +81,27 @@ services:
       dashboard_service:
         condition: service_healthy
 
+  pre_processing:
+    build:
+      context: ./pre_processing
+      dockerfile: Dockerfile
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_NORMALIZED_URI: mongodb://mongo:27017
+      OSM_DATA_DIR: /data/osm
+      PARCEL_PATH: /data/parcel_all/PARCEL_ALL.shp
+      FEATURES_OUTPUT_CSV: /outputs/features_osm.csv
+      TEMPORAL_OUTPUT_XLSX: /outputs/temporal_features.xlsx
+    volumes:
+      - ./data/osm:/data/osm:ro
+      - ./data/parcel_all:/data/parcel_all:ro
+      - ./pre_processing/outputs:/outputs
+    depends_on:
+      mongo:
+        condition: service_healthy
+
 volumes:
   mongo_data:

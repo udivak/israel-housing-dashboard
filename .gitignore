@@ -212,3 +212,27 @@ marimo/_lsp/
 __marimo__/
 collector_service/*.csv
 collector_service/*.parquet
+
+# Large geodata / OSM / shapefiles
+data/
+pre_processing/outputs/
+*.osm
+*.pbf
+*.gpkg
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.qix
+*.fix
+*.sbn
+*.sbx
+*.tif
+*.tiff
+
+# Large spreadsheets / exports
+*.xlsx
+*.xls
+*.csv
+*.parquet
