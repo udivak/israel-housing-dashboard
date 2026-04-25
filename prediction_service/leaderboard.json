@@ -1,0 +1,382 @@
+{
+  "runs": [
+    {
+      "submission": "moses/lightgbm_v1",
+      "timestamp": "2026-04-24T15:02:56+00:00",
+      "metrics": {
+        "mae": 924954.3314624871,
+        "rmse": 1398544.1962558057,
+        "mape": 0.6184618217067661,
+        "r2": -0.017049702947116607,
+        "n": 32819
+      },
+      "metadata": {
+        "submission": "moses/lightgbm_v1",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-24T15:02:56+00:00",
+        "n_train": 116751,
+        "n_val": 17492,
+        "n_test": 32819,
+        "n_features": 87
+      }
+    },
+    {
+      "submission": "moses/lightgbm_v1",
+      "timestamp": "2026-04-24T15:05:15+00:00",
+      "metrics": {
+        "mae": 850743.1792671833,
+        "rmse": 1113453.7468876312,
+        "mape": 0.5535197999810719,
+        "r2": 0.12728739618404605,
+        "n": 32575
+      },
+      "metadata": {
+        "submission": "moses/lightgbm_v1",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-24T15:05:15+00:00",
+        "n_train": 12305,
+        "n_val": 11370,
+        "n_test": 32575,
+        "n_features": 88
+      }
+    },
+    {
+      "submission": "moses/lightgbm_v1",
+      "timestamp": "2026-04-24T15:07:34+00:00",
+      "metrics": {
+        "mae": 311795.6610733384,
+        "rmse": 549517.6953559214,
+        "mape": 0.2046096544683161,
+        "r2": 0.8074444045790496,
+        "n": 5625
+      },
+      "metadata": {
+        "submission": "moses/lightgbm_v1",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-24T15:07:34+00:00",
+        "n_train": 45000,
+        "n_val": 5625,
+        "n_test": 5625,
+        "n_features": 88
+      }
+    },
+    {
+      "submission": "moses/lightgbm_v2_log",
+      "timestamp": "2026-04-24T15:13:17+00:00",
+      "metrics": {
+        "mae": 324943.9625774477,
+        "rmse": 569195.9149957994,
+        "mape": 0.1933031917886837,
+        "r2": 0.7934066545482116,
+        "n": 5625
+      },
+      "metadata": {
+        "submission": "moses/lightgbm_v2_log",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-24T15:13:17+00:00",
+        "n_train": 45000,
+        "n_val": 5625,
+        "n_test": 5625,
+        "n_features": 88
+      }
+    },
+    {
+      "submission": "moses/lightgbm_tuned",
+      "timestamp": "2026-04-24T15:25:40+00:00",
+      "metrics": {
+        "mae": 315034.47217333724,
+        "rmse": 564064.9215500421,
+        "mape": 0.18801240712076797,
+        "r2": 0.7971145213090904,
+        "n": 5625
+      },
+      "metadata": {
+        "submission": "moses/lightgbm_tuned",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-24T15:25:40+00:00",
+        "n_train": 45000,
+        "n_val": 5625,
+        "n_test": 5625,
+        "n_features": 88
+      }
+    },
+    {
+      "submission": "moses/catboost_v1",
+      "timestamp": "2026-04-24T15:40:32+00:00",
+      "metrics": {
+        "mae": 326519.29922081373,
+        "rmse": 574690.9565034268,
+        "mape": 0.19384115664830104,
+        "r2": 0.7893984780972727,
+        "n": 5625
+      },
+      "metadata": {
+        "submission": "moses/catboost_v1",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-24T15:40:32+00:00",
+        "n_train": 45000,
+        "n_val": 5625,
+        "n_test": 5625,
+        "n_features": 88
+      }
+    },
+    {
+      "submission": "moses/stacked_v1",
+      "timestamp": "2026-04-25T08:35:15+00:00",
+      "metrics": {
+        "mae": 315909.9747074423,
+        "rmse": 562631.6192111849,
+        "mape": 0.18887053114459348,
+        "r2": 0.7981442849408047,
+        "n": 5625
+      },
+      "metadata": {
+        "submission": "moses/stacked_v1",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-25T08:35:15+00:00",
+        "n_train": 45000,
+        "n_val": 5625,
+        "n_test": 5625,
+        "n_features": 88
+      }
+    },
+    {
+      "submission": "moses/stacked_v1",
+      "timestamp": "2026-04-25T08:39:33+00:00",
+      "metrics": {
+        "mae": 313836.1601806504,
+        "rmse": 561170.369717805,
+        "mape": 0.18750222385738052,
+        "r2": 0.7991914302443086,
+        "n": 5625
+      },
+      "metadata": {
+        "submission": "moses/stacked_v1",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-25T08:39:33+00:00",
+        "n_train": 45000,
+        "n_val": 5625,
+        "n_test": 5625,
+        "n_features": 88
+      }
+    },
+    {
+      "submission": "moses/lightgbm_knn",
+      "timestamp": "2026-04-25T09:15:17+00:00",
+      "metrics": {
+        "mae": 322417.0956955008,
+        "rmse": 574488.8701971681,
+        "mape": 0.19237988382836207,
+        "r2": 0.7895465653440108,
+        "n": 5625
+      },
+      "metadata": {
+        "submission": "moses/lightgbm_knn",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-25T09:15:17+00:00",
+        "n_train": 45000,
+        "n_val": 5625,
+        "n_test": 5625,
+        "n_features": 88
+      }
+    },
+    {
+      "submission": "moses/stacked_v2",
+      "timestamp": "2026-04-25T09:20:59+00:00",
+      "metrics": {
+        "mae": 319593.5314214526,
+        "rmse": 567919.7379982857,
+        "mape": 0.1908112541456014,
+        "r2": 0.7943320094493037,
+        "n": 5625
+      },
+      "metadata": {
+        "submission": "moses/stacked_v2",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-25T09:20:59+00:00",
+        "n_train": 45000,
+        "n_val": 5625,
+        "n_test": 5625,
+        "n_features": 88
+      }
+    },
+    {
+      "submission": "moses/lightgbm_tuned",
+      "timestamp": "2026-04-25T09:28:07+00:00",
+      "metrics": {
+        "mae": 365357.7322732277,
+        "rmse": 623722.0632671482,
+        "mape": 0.21317107162875432,
+        "r2": 0.7519295736943583,
+        "n": 5625
+      },
+      "metadata": {
+        "submission": "moses/lightgbm_tuned",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-25T09:28:07+00:00",
+        "n_train": 45000,
+        "n_val": 5625,
+        "n_test": 5625,
+        "n_features": 74
+      }
+    },
+    {
+      "submission": "moses/lightgbm_tuned",
+      "timestamp": "2026-04-25T09:34:13+00:00",
+      "metrics": {
+        "mae": 310978.20283669495,
+        "rmse": 560084.6750116915,
+        "mape": 0.18748800528318094,
+        "r2": 0.7999676861360633,
+        "n": 5625
+      },
+      "metadata": {
+        "submission": "moses/lightgbm_tuned",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-25T09:34:13+00:00",
+        "n_train": 45000,
+        "n_val": 5625,
+        "n_test": 5625,
+        "n_features": 89
+      }
+    },
+    {
+      "submission": "moses/lightgbm_knn",
+      "timestamp": "2026-04-25T09:36:41+00:00",
+      "metrics": {
+        "mae": 315104.93653951737,
+        "rmse": 564273.2727339317,
+        "mape": 0.19072169425662716,
+        "r2": 0.7969646121938183,
+        "n": 5625
+      },
+      "metadata": {
+        "submission": "moses/lightgbm_knn",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-25T09:36:41+00:00",
+        "n_train": 45000,
+        "n_val": 5625,
+        "n_test": 5625,
+        "n_features": 89
+      }
+    },
+    {
+      "submission": "moses/stacked_v2",
+      "timestamp": "2026-04-25T09:41:20+00:00",
+      "metrics": {
+        "mae": 313924.6410149792,
+        "rmse": 560599.149100175,
+        "mape": 0.1899695051563556,
+        "r2": 0.7996000320567711,
+        "n": 5625
+      },
+      "metadata": {
+        "submission": "moses/stacked_v2",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-25T09:41:20+00:00",
+        "n_train": 45000,
+        "n_val": 5625,
+        "n_test": 5625,
+        "n_features": 89
+      }
+    },
+    {
+      "submission": "moses/stacked_v1",
+      "timestamp": "2026-04-25T09:45:30+00:00",
+      "metrics": {
+        "mae": 310050.0550837294,
+        "rmse": 557684.7098413622,
+        "mape": 0.18688620342346557,
+        "r2": 0.8016782918903482,
+        "n": 5625
+      },
+      "metadata": {
+        "submission": "moses/stacked_v1",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-25T09:45:30+00:00",
+        "n_train": 45000,
+        "n_val": 5625,
+        "n_test": 5625,
+        "n_features": 89
+      }
+    },
+    {
+      "submission": "moses/stacked_v1",
+      "timestamp": "2026-04-25T10:20:36+00:00",
+      "metrics": {
+        "mae": 634743.2807573754,
+        "rmse": 1738502.741626423,
+        "mape": 0.2350346852247807,
+        "r2": 0.5974648364002848,
+        "n": 16707
+      },
+      "metadata": {
+        "submission": "moses/stacked_v1",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-25T10:20:36+00:00",
+        "n_train": 133649,
+        "n_val": 16706,
+        "n_test": 16707,
+        "n_features": 90
+      }
+    },
+    {
+      "submission": "moses/stacked_v1",
+      "timestamp": "2026-04-25T10:27:48+00:00",
+      "metrics": {
+        "mae": 632299.2316764024,
+        "rmse": 1728597.5189856524,
+        "mape": 0.23479877580836586,
+        "r2": 0.6020387052420049,
+        "n": 16707
+      },
+      "metadata": {
+        "submission": "moses/stacked_v1",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-25T10:27:48+00:00",
+        "n_train": 133649,
+        "n_val": 16706,
+        "n_test": 16707,
+        "n_features": 89
+      }
+    },
+    {
+      "submission": "moses/stacked_v1",
+      "timestamp": "2026-04-25T10:32:14+00:00",
+      "metrics": {
+        "mae": 310050.0550837294,
+        "rmse": 557684.7098413622,
+        "mape": 0.18688620342346557,
+        "r2": 0.8016782918903482,
+        "n": 5625
+      },
+      "metadata": {
+        "submission": "moses/stacked_v1",
+        "seed": 42,
+        "git_sha": "958f223",
+        "trained_at": "2026-04-25T10:32:14+00:00",
+        "n_train": 45000,
+        "n_val": 5625,
+        "n_test": 5625,
+        "n_features": 89
+      }
+    }
+  ]
+}
