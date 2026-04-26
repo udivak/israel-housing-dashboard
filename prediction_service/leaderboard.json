@@ -377,6 +377,49 @@
         "n_test": 5625,
         "n_features": 89
       }
+    },
+    {
+      "submission": "udi/random_forest_v1",
+      "timestamp": "2026-04-26T10:58:48+00:00",
+      "metrics": {
+        "mae": 684681.4748202885,
+        "rmse": 960121.4494130492,
+        "mape": 0.4704584473716901,
+        "r2": 0.36665718535589,
+        "n": 6710
+      },
+      "metadata": {
+        "submission": "udi/random_forest_v1",
+        "seed": 42,
+        "git_sha": "b2f8e09",
+        "trained_at": "2026-04-26T10:58:48+00:00",
+        "n_train": 53671,
+        "n_val": 6708,
+        "n_test": 6710,
+        "n_features": 11
+      }
+    },
+    {
+      "submission": "udi/random_forest_v2",
+      "timestamp": "2026-04-26T11:43:36+00:00",
+      "metrics": {
+        "mae": 292847.2730900387,
+        "rmse": 537583.0572051081,
+        "mape": 0.20605824225027786,
+        "r2": 0.8014218947983419,
+        "n": 5945
+      },
+      "metadata": {
+        "submission": "udi/random_forest_v2",
+        "seed": 42,
+        "data_version": "v2",
+        "git_sha": "b2f8e09",
+        "trained_at": "2026-04-26T11:43:36+00:00",
+        "n_train": 47550,
+        "n_val": 5943,
+        "n_test": 5945,
+        "n_features": 77
+      }
     }
   ]
 }
