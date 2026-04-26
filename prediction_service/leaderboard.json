@@ -420,6 +420,28 @@
         "n_test": 5945,
         "n_features": 77
       }
+    },
+    {
+      "submission": "udi/xgboost_v1",
+      "timestamp": "2026-04-26T12:53:26+00:00",
+      "metrics": {
+        "mae": 285538.20631439233,
+        "rmse": 519799.81840159505,
+        "mape": 0.20474735138957187,
+        "r2": 0.8143425146832504,
+        "n": 5945
+      },
+      "metadata": {
+        "submission": "udi/xgboost_v1",
+        "seed": 42,
+        "data_version": "v2",
+        "git_sha": "9ca441c",
+        "trained_at": "2026-04-26T12:53:26+00:00",
+        "n_train": 47550,
+        "n_val": 5943,
+        "n_test": 5945,
+        "n_features": 77
+      }
     }
   ]
 }
