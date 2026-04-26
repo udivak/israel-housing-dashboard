@@ -442,6 +442,160 @@
         "n_test": 5945,
         "n_features": 77
       }
+    },
+    {
+      "submission": "udi/xgboost_v2",
+      "timestamp": "2026-04-26T13:23:23+00:00",
+      "metrics": {
+        "mae": 906925.345668629,
+        "rmse": 1216535.9291384397,
+        "mape": 0.6673348536349957,
+        "r2": -0.016927745574907727,
+        "n": 5945
+      },
+      "metadata": {
+        "submission": "udi/xgboost_v2",
+        "seed": 42,
+        "data_version": "v2",
+        "git_sha": "abc71c0",
+        "trained_at": "2026-04-26T13:23:23+00:00",
+        "n_train": 47550,
+        "n_val": 5943,
+        "n_test": 5945,
+        "n_features": 77
+      }
+    },
+    {
+      "submission": "udi/xgboost_v2",
+      "timestamp": "2026-04-26T13:26:59+00:00",
+      "metrics": {
+        "mae": 288395.80383462994,
+        "rmse": 521760.71335219714,
+        "mape": 0.20230004139233876,
+        "r2": 0.8129391224790228,
+        "n": 5945
+      },
+      "metadata": {
+        "submission": "udi/xgboost_v2",
+        "seed": 42,
+        "data_version": "v2",
+        "git_sha": "abc71c0",
+        "trained_at": "2026-04-26T13:26:59+00:00",
+        "n_train": 47550,
+        "n_val": 5943,
+        "n_test": 5945,
+        "n_features": 77
+      }
+    },
+    {
+      "submission": "udi/xgboost_v3",
+      "timestamp": "2026-04-26T13:30:18+00:00",
+      "metrics": {
+        "mae": 282393.36850294366,
+        "rmse": 509957.73370007024,
+        "mape": 0.19852465334273514,
+        "r2": 0.8213065714224298,
+        "n": 5945
+      },
+      "metadata": {
+        "submission": "udi/xgboost_v3",
+        "seed": 42,
+        "data_version": "v2",
+        "git_sha": "abc71c0",
+        "trained_at": "2026-04-26T13:30:18+00:00",
+        "n_train": 47550,
+        "n_val": 5943,
+        "n_test": 5945,
+        "n_features": 77
+      }
+    },
+    {
+      "submission": "udi/xgboost_v4",
+      "timestamp": "2026-04-26T13:33:46+00:00",
+      "metrics": {
+        "mae": 289710.78950404754,
+        "rmse": 513382.2807818667,
+        "mape": 0.2036469926448373,
+        "r2": 0.8188985335419765,
+        "n": 5945
+      },
+      "metadata": {
+        "submission": "udi/xgboost_v4",
+        "seed": 42,
+        "data_version": "v2",
+        "git_sha": "abc71c0",
+        "trained_at": "2026-04-26T13:33:46+00:00",
+        "n_train": 47550,
+        "n_val": 5943,
+        "n_test": 5945,
+        "n_features": 77
+      }
+    },
+    {
+      "submission": "udi/xgboost_v5",
+      "timestamp": "2026-04-26T13:40:14+00:00",
+      "metrics": {
+        "mae": 299641.19593933976,
+        "rmse": 524253.0602380385,
+        "mape": 0.2189742129201422,
+        "r2": 0.8111477491348755,
+        "n": 5945
+      },
+      "metadata": {
+        "submission": "udi/xgboost_v5",
+        "seed": 42,
+        "data_version": "v2",
+        "git_sha": "abc71c0",
+        "trained_at": "2026-04-26T13:40:14+00:00",
+        "n_train": 47550,
+        "n_val": 5943,
+        "n_test": 5945,
+        "n_features": 77
+      }
+    },
+    {
+      "submission": "udi/xgboost_v5",
+      "timestamp": "2026-04-26T14:42:11+00:00",
+      "metrics": {
+        "mae": 278687.6327546783,
+        "rmse": 504365.1486116106,
+        "mape": 0.20148991805054647,
+        "r2": 0.8252044565866609,
+        "n": 5945
+      },
+      "metadata": {
+        "submission": "udi/xgboost_v5",
+        "seed": 42,
+        "data_version": "v2",
+        "git_sha": "abc71c0",
+        "trained_at": "2026-04-26T14:42:11+00:00",
+        "n_train": 47550,
+        "n_val": 5943,
+        "n_test": 5945,
+        "n_features": 77
+      }
+    },
+    {
+      "submission": "udi/xgboost_v5",
+      "timestamp": "2026-04-26T15:19:34+00:00",
+      "metrics": {
+        "mae": 278687.6327546783,
+        "rmse": 504365.1486116106,
+        "mape": 0.20148991805054647,
+        "r2": 0.8252044565866609,
+        "n": 5945
+      },
+      "metadata": {
+        "submission": "udi/xgboost_v5",
+        "seed": 42,
+        "data_version": "v2",
+        "git_sha": "abc71c0",
+        "trained_at": "2026-04-26T15:19:34+00:00",
+        "n_train": 47550,
+        "n_val": 5943,
+        "n_test": 5945,
+        "n_features": 77
+      }
     }
   ]
 }
