@@ -24,7 +24,6 @@ from pathlib import Path
 
 import joblib
 
-from common import data as data_mod
 from common import evaluate as eval_mod
 from common import leaderboard
 
@@ -41,12 +40,14 @@ def _git_sha() -> str:
         return "unknown"
 
 
-def run(submission: str, seed: int = 42) -> None:
+def run(submission: str, seed: int = 42, data_version: str = "v1") -> None:
     # submission = "moses/lightgbm_v1"
     person, model_name = submission.split("/")
     module_path = f"models.{person}.{model_name}"
 
-    print(f"▶ Loading data...")
+    data_module_name = "common.data_v2" if data_version == "v2" else "common.data"
+    print(f"▶ Loading data ({data_module_name})...")
+    data_mod = importlib.import_module(data_module_name)
     X_train, y_train, X_val, y_val, X_test, y_test = data_mod.load_data()
     print(f"   train={len(X_train):,}   val={len(X_val):,}   test={len(X_test):,}")
 
@@ -72,6 +73,7 @@ def run(submission: str, seed: int = 42) -> None:
     metadata = {
         "submission": submission,
         "seed": seed,
+        "data_version": data_version,
         "git_sha": _git_sha(),
         "trained_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "n_train": len(X_train),
@@ -90,7 +92,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("submission", help="e.g. moses/lightgbm_v1")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--data",
+        choices=["v1", "v2"],
+        default="v1",
+        help="גרסת ה-loader (v1 = data.py הקיים; v2 = data_v2.py עם 3 שכבות).",
+    )
     args = parser.parse_args()
 
     sys.path.insert(0, str(ROOT))
-    run(args.submission, seed=args.seed)
+    run(args.submission, seed=args.seed, data_version=args.data)
