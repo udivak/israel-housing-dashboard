@@ -1,17 +1,22 @@
 """Shared neural-network helpers for udi/* models.
 
-Plan 1 (slim) skeleton — categorical/embedding/engineered/KNN paths are
-deferred to Plan 2; SequentialLR + warmup is deferred to Plan 3. Markers
-of the form ``# TODO(plan-2)`` / ``# TODO(plan-3)`` flag the integration
-points the next sub-plans will edit.
+Plan 2 extends the Plan 1 skeleton with: (a) ``TabularPreprocessor``
+``include_categorical=True`` path (slot-0-unknown encoding +
+``cat_categories`` snapshot); (b) ``build_engineered_features`` /
+``fit_kmeans`` / ``KnnFeatureBuilder`` / ``oof_train_knn`` (verbatim
+copies from ``xgboost_v3.py`` so ``udi/`` stays self-contained); (c)
+``PyTorchTrainer.fit`` cat-path extension (3-tuple ``TensorDataset`` +
+``model(x_num, x_cat)`` calls). SequentialLR + warmup is deferred to
+Plan 3.
 
 Cold-load contract — IMPORTANT
 ------------------------------
 ``MODEL_REGISTRY`` is populated as an *import-time side-effect* of the
 ``@register_model`` decorator on each NN class (e.g. ``MLP`` in
-``models/udi/nn_v1.py``). A fresh Python process that calls
-``joblib.load(...)`` followed by ``load_bundle(...)`` without first
-importing the model module will hit ``KeyError: <ClassName>``.
+``models/udi/nn_v1.py``, ``EmbedMLP`` in ``models/udi/nn_v2.py``). A
+fresh Python process that calls ``joblib.load(...)`` followed by
+``load_bundle(...)`` without first importing the model module will hit
+``KeyError: <ClassName>``.
 
 Therefore any cold-load caller — round-trip script, future ``serve.py``
 wrapper, notebook — MUST do::
@@ -28,7 +33,6 @@ redefined between train and predict.
 
 from __future__ import annotations
 
-import copy
 import json
 import random
 from pathlib import Path
@@ -37,7 +41,10 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import torch
+from sklearn.cluster import KMeans  # pyright: ignore[reportMissingImports]
 from sklearn.impute import SimpleImputer  # pyright: ignore[reportMissingImports]
+from sklearn.model_selection import KFold  # pyright: ignore[reportMissingImports]
+from sklearn.neighbors import BallTree  # pyright: ignore[reportMissingImports]
 from sklearn.preprocessing import QuantileTransformer  # pyright: ignore[reportMissingImports]
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
@@ -53,6 +60,29 @@ DEAD_COLS: tuple[str, ...] = (
 )
 
 NAN_INDICATOR_THRESHOLD = 0.01  # > 1% NaN on train → emit a `<col>_nan` indicator
+
+# Categorical columns that get embedded by the categorical-aware preprocessor
+# path. Order is frozen — the preprocessor + every downstream embedding model
+# must read columns in this order so the (col, embedding-row) mapping is
+# deterministic across train / predict / cold-reload. ``geo_cluster`` is
+# produced upstream by ``build_engineered_features``; the first three live in
+# the loader.
+CAT_COLS_EMBED: tuple[str, ...] = (
+    "city",
+    "neighborhood",
+    "deal_nature",
+    "geo_cluster",
+)
+
+# KMeans + GeoKNN constants (verbatim from xgboost_v3.py — kept self-contained
+# under udi/ rather than re-exported, matching xgboost_v3.py's "kept
+# self-contained" comment).
+N_CLUSTERS: int = 64
+RANDOM_STATE: int = 42
+K_NEAR: int = 5
+K_MID: int = 10
+N_KNN_FOLDS: int = 5
+EARTH_RADIUS_M: float = 6_371_000.0
 
 
 # ---------------------------------------------------------------------------
@@ -206,14 +236,32 @@ def drop_dead_cols(X: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
 
 
 # ---------------------------------------------------------------------------
-# Tabular preprocessor — numeric-only path (Plan 1)
+# Tabular preprocessor — numeric + optional categorical (Plans 1 + 2)
 # ---------------------------------------------------------------------------
 class TabularPreprocessor:
-    """Freeze a numeric column order on ``fit``; reindex + transform on ``transform``.
+    """Freeze numeric (+ optional cat) column order on ``fit``; transform on ``transform``.
 
-    Plan 1 implements only the ``include_categorical=False`` path. The
-    categorical path will be filled in by Plan 2 (slot-0 unknown encoding,
-    cardinalities, etc.).
+    Plan 1 introduced the ``include_categorical=False`` path (numeric only).
+    Plan 2 adds the ``include_categorical=True`` path: per-column
+    ``cat.categories`` snapshot + slot-0-unknown integer encoding suitable
+    for ``nn.Embedding``.
+
+    Encoding contract for the cat path
+    ----------------------------------
+    * Cat columns are detected against the frozen :data:`CAT_COLS_EMBED`
+      tuple. Cols not present in ``X.columns`` at fit-time are silently
+      skipped (lets v1-style frames pass through this class without
+      crashing — the resulting cat list is just empty).
+    * On ``fit``, each cat column's ``cat.categories`` is snapshotted into
+      the **public** ``cat_categories: dict[str, pd.Index]``. This is read
+      directly by per-model ``predict()`` to re-align serving frames before
+      calling ``transform`` (e.g. ``models.udi.nn_v2.predict``).
+    * On ``transform``, each cat column is re-cast to
+      ``pd.Categorical(values, categories=cat_categories[col])`` (values
+      not in the train vocab become NaN → code ``-1``), then shifted by
+      +1 so ``codes_shifted[NaN] == 0`` is the "unknown" slot and the real
+      train levels occupy ``[1..card]``. Embedding layers thus need
+      ``num_embeddings = card + 1``.
     """
 
     def __init__(self, include_categorical: bool = True) -> None:
@@ -223,33 +271,49 @@ class TabularPreprocessor:
         self._imputer: SimpleImputer | None = None
         self._quantile: QuantileTransformer | None = None
         self.feature_columns: list[str] = []
-        # TODO(plan-2): add categorical state
-        #   self._cat_cols: list[str] = []
-        #   self._cat_categories: dict[str, pd.Index] = {}
-        #   self._cat_cardinalities: list[int] = []
+        # Categorical state (populated only when include_categorical=True).
+        # Public ``cat_categories`` because per-model ``predict()`` reads
+        # it via ``bundle["preprocessor"].cat_categories[col]``.
+        self._cat_cols: list[str] = []
+        self.cat_categories: dict[str, pd.Index] = {}
+        self._cat_cardinalities: list[int] = []
 
     def fit(self, X: pd.DataFrame) -> "TabularPreprocessor":
         if self.include_categorical:
-            # TODO(plan-2): implement categorical path
-            raise NotImplementedError(
-                "include_categorical=True is reserved for Plan 2"
-            )
+            self._cat_cols = [c for c in CAT_COLS_EMBED if c in X.columns]
+            self.cat_categories = {}
+            for col in self._cat_cols:
+                cats = pd.Index(X[col].astype("category").cat.categories)
+                self.cat_categories[col] = cats
+            self._cat_cardinalities = [
+                len(self.cat_categories[c]) for c in self._cat_cols
+            ]
+            X_for_numeric = X.drop(columns=self._cat_cols, errors="ignore")
+        else:
+            self._cat_cols = []
+            self.cat_categories = {}
+            self._cat_cardinalities = []
+            X_for_numeric = X
 
         # Drop columns that are entirely-NaN on train: SimpleImputer
         # skips them (UserWarning + values stay NaN), QuantileTransformer
         # then propagates NaN into the network and the loss explodes to
         # inf. They carry zero signal anyway, so freeze them out of the
         # canonical column order.
-        all_nan_mask = X.isna().all()
-        all_nan_cols = [c for c in X.columns if bool(all_nan_mask.get(c, False))]
+        all_nan_mask = X_for_numeric.isna().all()
+        all_nan_cols = [
+            c for c in X_for_numeric.columns if bool(all_nan_mask.get(c, False))
+        ]
         if all_nan_cols:
             print(
                 f"  [TabularPreprocessor] dropping {len(all_nan_cols)} all-NaN cols "
                 f"on train: {all_nan_cols}"
             )
-        self._numeric_cols = [c for c in X.columns if c not in all_nan_cols]
+        self._numeric_cols = [
+            c for c in X_for_numeric.columns if c not in all_nan_cols
+        ]
 
-        nan_rate = X[self._numeric_cols].isna().mean()
+        nan_rate = X_for_numeric[self._numeric_cols].isna().mean()
         self._nan_indicator_cols = [
             c
             for c in self._numeric_cols
@@ -257,7 +321,7 @@ class TabularPreprocessor:
         ]
 
         self._imputer = SimpleImputer(strategy="median")
-        X_num = X[self._numeric_cols].astype(float)
+        X_num = X_for_numeric[self._numeric_cols].astype(float)
         imputed = self._imputer.fit_transform(X_num)
 
         self._quantile = QuantileTransformer(
@@ -265,9 +329,11 @@ class TabularPreprocessor:
         )
         self._quantile.fit(imputed)
 
-        self.feature_columns = list(self._numeric_cols) + [
-            f"{c}_nan" for c in self._nan_indicator_cols
-        ]
+        self.feature_columns = (
+            list(self._numeric_cols)
+            + [f"{c}_nan" for c in self._nan_indicator_cols]
+            + list(self._cat_cols)
+        )
         return self
 
     def transform(
@@ -276,11 +342,37 @@ class TabularPreprocessor:
         if self._imputer is None or self._quantile is None:
             raise RuntimeError("TabularPreprocessor.transform called before fit")
 
+        if self.include_categorical and self._cat_cols:
+            cat_columns: list[np.ndarray] = []
+            for col in self._cat_cols:
+                train_cats = self.cat_categories[col]
+                if col in X.columns:
+                    re_cast = pd.Categorical(
+                        X[col].to_numpy(), categories=train_cats
+                    )
+                    codes = np.asarray(re_cast.codes, dtype=np.int64)
+                else:
+                    # Column missing on a serving frame → everything maps
+                    # to the unknown slot.
+                    codes = np.full(len(X), -1, dtype=np.int64)
+                cat_columns.append(codes + 1)  # slot 0 = NaN/unseen
+            X_cat = (
+                np.column_stack(cat_columns)
+                if cat_columns
+                else np.zeros((len(X), 0), dtype=np.int64)
+            )
+            cat_cardinalities = list(self._cat_cardinalities)
+            X_for_numeric = X.drop(columns=self._cat_cols, errors="ignore")
+        else:
+            X_cat = None
+            cat_cardinalities = []
+            X_for_numeric = X
+
         # Reindex to the frozen training column order. Missing columns
         # become all-NaN (imputer fills with train median); extras are
         # silently dropped. Makes predict() robust against slight column
         # drift between train and serving.
-        X_aligned = X.reindex(columns=self._numeric_cols)
+        X_aligned = X_for_numeric.reindex(columns=self._numeric_cols)
 
         # Indicator columns are computed on the reindexed frame *before*
         # imputation so they capture real missingness, not post-fill medians.
@@ -314,8 +406,224 @@ class TabularPreprocessor:
             np.float32
         )
 
-        # X_cat / cat_cardinalities reserved for Plan 2.
-        return X_num, None, []
+        return X_num, X_cat, cat_cardinalities
+
+
+# ---------------------------------------------------------------------------
+# Engineered features + KMeans geo_cluster — verbatim copy of
+# ``xgboost_v3._add_engineered`` / ``_fit_kmeans``. Kept self-contained under
+# udi/ rather than re-exported from xgboost_v3 (matches xgboost_v3.py's
+# "kept self-contained" comment).
+# ---------------------------------------------------------------------------
+def build_engineered_features(
+    X: pd.DataFrame, kmeans: KMeans | None
+) -> pd.DataFrame:
+    """Add ``area_per_room``, ``log_area_sqm``, ``floor_ratio``, ``age_x_area``, ``geo_cluster``.
+
+    NaN-safe via ``np.where(rooms>0, ..., NaN)`` style guards (real
+    ``rooms==0`` rows would otherwise produce ``inf``). ``geo_cluster`` is
+    a Categorical with the fixed codebook ``[-1, 0..63]`` so splits/codes
+    are identical across train/val/test/serving.
+    """
+    X = X.copy()
+
+    if "area_sqm" in X.columns and "rooms" in X.columns:
+        rooms = X["rooms"].astype(float)
+        X["area_per_room"] = np.where(
+            rooms > 0,
+            X["area_sqm"].astype(float) / rooms.replace(0, np.nan),
+            np.nan,
+        )
+
+    if "area_sqm" in X.columns:
+        X["log_area_sqm"] = np.log1p(X["area_sqm"].astype(float))
+
+    if "floor" in X.columns and "building_floors" in X.columns:
+        bf = X["building_floors"].astype(float)
+        X["floor_ratio"] = np.where(
+            bf > 0,
+            X["floor"].astype(float) / bf.replace(0, np.nan),
+            np.nan,
+        )
+
+    if "property_age" in X.columns and "area_sqm" in X.columns:
+        X["age_x_area"] = X["property_age"].astype(float) * X["area_sqm"].astype(
+            float
+        )
+
+    if kmeans is not None and "lat" in X.columns and "lon" in X.columns:
+        coords = X[["lat", "lon"]].astype(float).values
+        valid = ~np.isnan(coords).any(axis=1)
+        labels = np.full(len(X), -1, dtype=int)
+        if valid.any():
+            labels[valid] = kmeans.predict(coords[valid])
+        X["geo_cluster"] = pd.Categorical(
+            labels, categories=list(range(-1, N_CLUSTERS))
+        )
+
+    return X
+
+
+def fit_kmeans(X_train: pd.DataFrame) -> KMeans | None:
+    """Fit ``KMeans(n_clusters=64)`` on train ``(lat, lon)``; ``None`` if coords missing."""
+    if "lat" not in X_train.columns or "lon" not in X_train.columns:
+        return None
+    coords = X_train[["lat", "lon"]].astype(float).values
+    valid = ~np.isnan(coords).any(axis=1)
+    if valid.sum() < N_CLUSTERS:
+        return None
+    km = KMeans(n_clusters=N_CLUSTERS, n_init="auto", random_state=RANDOM_STATE)
+    km.fit(coords[valid])
+    return km
+
+
+# ---------------------------------------------------------------------------
+# GeoKNN — verbatim copy of ``xgboost_v3``'s GeoKNN block (helpers + OOF +
+# ``KnnFeatureBuilder``). The ``_oof_train_knn`` private helper is renamed
+# to public ``oof_train_knn`` for direct import from per-model train()
+# pipelines.
+# ---------------------------------------------------------------------------
+def _has_coords(X: pd.DataFrame) -> np.ndarray:
+    if "lat" not in X.columns or "lon" not in X.columns:
+        return np.zeros(len(X), dtype=bool)
+    return (X["lat"].notna() & X["lon"].notna()).values
+
+
+def _compute_pps(price: np.ndarray, area: np.ndarray) -> np.ndarray:
+    pps = np.full_like(price, np.nan, dtype=float)
+    valid = (area > 0) & ~np.isnan(area) & ~np.isnan(price)
+    pps[valid] = price[valid] / area[valid]
+    return pps
+
+
+def _build_tree(lat: np.ndarray, lon: np.ndarray) -> BallTree:
+    coords = np.column_stack([np.radians(lat), np.radians(lon)])
+    return BallTree(coords, metric="haversine")
+
+
+def _query_features(
+    tree: BallTree,
+    ref_pps: np.ndarray,
+    ref_price: np.ndarray,
+    lat_q: np.ndarray,
+    lon_q: np.ndarray,
+    skip_self: bool = False,
+) -> dict[str, np.ndarray]:
+    coords_q = np.column_stack([np.radians(lat_q), np.radians(lon_q)])
+    k_max = max(K_NEAR, K_MID) + (1 if skip_self else 0)
+    dist_rad, idx = tree.query(coords_q, k=k_max)
+    dist_m = dist_rad * EARTH_RADIUS_M
+
+    if skip_self:
+        idx = idx[:, 1:]
+        dist_m = dist_m[:, 1:]
+
+    pps_near = ref_pps[idx[:, :K_NEAR]]
+    knn5_mean_pps = np.nanmean(pps_near, axis=1)
+
+    pps_mid = ref_pps[idx[:, :K_MID]]
+    knn10_median_pps = np.nanmedian(pps_mid, axis=1)
+
+    price_near = ref_price[idx[:, :K_NEAR]]
+    weights = 1.0 / (dist_m[:, :K_NEAR] + 1.0)
+    weights = weights / weights.sum(axis=1, keepdims=True)
+    knn5_dw_price = np.nansum(price_near * weights, axis=1)
+
+    return {
+        "knn5_mean_price_per_sqm": knn5_mean_pps,
+        "knn10_median_price_per_sqm": knn10_median_pps,
+        "knn5_dist_weighted_price": knn5_dw_price,
+    }
+
+
+def _empty_knn_features(n: int) -> dict[str, np.ndarray]:
+    return {
+        "knn5_mean_price_per_sqm": np.full(n, np.nan),
+        "knn10_median_price_per_sqm": np.full(n, np.nan),
+        "knn5_dist_weighted_price": np.full(n, np.nan),
+    }
+
+
+def oof_train_knn(X: pd.DataFrame, y: np.ndarray) -> pd.DataFrame:
+    """5-fold OOF GeoKNN features for train (no row sees its own neighbour set).
+
+    Renamed from ``xgboost_v3._oof_train_knn`` (private) to public so it
+    can be imported directly from ``models/udi/nn_v2.py``. Body otherwise
+    identical to the xgboost_v3 implementation.
+    """
+    n = len(X)
+    feats = _empty_knn_features(n)
+    has = _has_coords(X)
+    if has.sum() == 0:
+        return pd.DataFrame(feats, index=X.index)
+
+    lat = X["lat"].values
+    lon = X["lon"].values
+    area = X["area_sqm"].values
+    pps_full = _compute_pps(y.astype(float), area.astype(float))
+    y_float = y.astype(float)
+
+    has_idx = np.where(has)[0]
+    kf = KFold(n_splits=N_KNN_FOLDS, shuffle=True, random_state=RANDOM_STATE)
+    for ref_local, qry_local in kf.split(has_idx):
+        ref_idx = has_idx[ref_local]
+        qry_idx = has_idx[qry_local]
+        tree = _build_tree(lat[ref_idx], lon[ref_idx])
+        out = _query_features(
+            tree,
+            pps_full[ref_idx],
+            y_float[ref_idx],
+            lat[qry_idx],
+            lon[qry_idx],
+            skip_self=False,
+        )
+        for k, v in out.items():
+            feats[k][qry_idx] = v
+
+    return pd.DataFrame(feats, index=X.index)
+
+
+class KnnFeatureBuilder:
+    """BallTree on full-train → ``transform`` GeoKNN features for val/test/serving."""
+
+    def __init__(self) -> None:
+        self.tree: BallTree | None = None
+        self.ref_pps: np.ndarray | None = None
+        self.ref_price: np.ndarray | None = None
+
+    def fit(self, X_train: pd.DataFrame, y_train: np.ndarray) -> None:
+        has = _has_coords(X_train)
+        if has.sum() == 0:
+            return
+        lat = X_train["lat"].values[has]
+        lon = X_train["lon"].values[has]
+        area = X_train["area_sqm"].values[has].astype(float)
+        price = y_train[has].astype(float)
+        self.tree = _build_tree(lat, lon)
+        self.ref_pps = _compute_pps(price, area)
+        self.ref_price = price
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        n = len(X)
+        feats = _empty_knn_features(n)
+        if self.tree is None:
+            return pd.DataFrame(feats, index=X.index)
+        has = _has_coords(X)
+        if has.sum() == 0:
+            return pd.DataFrame(feats, index=X.index)
+        lat = X["lat"].values
+        lon = X["lon"].values
+        out = _query_features(
+            self.tree,
+            self.ref_pps,
+            self.ref_price,
+            lat[has],
+            lon[has],
+            skip_self=False,
+        )
+        for k, v in out.items():
+            feats[k][np.where(has)[0]] = v
+        return pd.DataFrame(feats, index=X.index)
 
 
 # ---------------------------------------------------------------------------
@@ -392,15 +700,28 @@ class PyTorchTrainer:
         y_train_std = (y_train_log - self.y_log_mean) / self.y_log_std
         y_val_std = (y_val_log - self.y_log_mean) / self.y_log_std
 
-        # 2. Build train/val tensors. Numeric-only path for now — cat
-        #    will be wired in by Plan 2 by switching on `X_cat_train is None`.
+        # 2. Build train/val tensors. Numeric-only path = (x_num, y)
+        #    TensorDataset; categorical path (Plan 2) = (x_num, x_cat, y) when
+        #    X_cat_train is not None. Branch exclusively on
+        #    ``X_cat_train is None`` so the v1 numeric-only call signature is
+        #    a strict no-op for the new code paths.
         x_train_t = torch.from_numpy(np.asarray(X_num_train, dtype=np.float32))
         y_train_t = torch.from_numpy(y_train_std.astype(np.float32))
         x_val_t = torch.from_numpy(np.asarray(X_num_val, dtype=np.float32))
         y_val_t = torch.from_numpy(y_val_std.astype(np.float32))
 
-        # TODO(plan-2): when X_cat_train is not None, build a (x_num, x_cat, y) TensorDataset
-        train_ds = TensorDataset(x_train_t, y_train_t)
+        if X_cat_train is not None:
+            x_train_cat_t = torch.from_numpy(
+                np.asarray(X_cat_train, dtype=np.int64)
+            )
+            x_val_cat_t: torch.Tensor | None = torch.from_numpy(
+                np.asarray(X_cat_val, dtype=np.int64)
+            )
+            train_ds = TensorDataset(x_train_t, x_train_cat_t, y_train_t)
+        else:
+            x_val_cat_t = None
+            train_ds = TensorDataset(x_train_t, y_train_t)
+
         train_loader = DataLoader(
             train_ds,
             batch_size=self.batch_size,
@@ -431,16 +752,29 @@ class PyTorchTrainer:
             model.train()
             running_loss = 0.0
             n_seen = 0
-            for x_b, y_b in train_loader:
-                x_b = x_b.to(self.device, non_blocking=True)
-                y_b = y_b.to(self.device, non_blocking=True)
-                optimizer.zero_grad()
-                pred = model(x_b).squeeze(-1)
-                loss = loss_fn(pred, y_b)
-                loss.backward()
-                optimizer.step()
-                running_loss += float(loss.item()) * x_b.size(0)
-                n_seen += x_b.size(0)
+            if X_cat_train is None:
+                for x_b, y_b in train_loader:
+                    x_b = x_b.to(self.device, non_blocking=True)
+                    y_b = y_b.to(self.device, non_blocking=True)
+                    optimizer.zero_grad()
+                    pred = model(x_b).squeeze(-1)
+                    loss = loss_fn(pred, y_b)
+                    loss.backward()
+                    optimizer.step()
+                    running_loss += float(loss.item()) * x_b.size(0)
+                    n_seen += x_b.size(0)
+            else:
+                for x_num_b, x_cat_b, y_b in train_loader:
+                    x_num_b = x_num_b.to(self.device, non_blocking=True)
+                    x_cat_b = x_cat_b.to(self.device, non_blocking=True)
+                    y_b = y_b.to(self.device, non_blocking=True)
+                    optimizer.zero_grad()
+                    pred = model(x_num_b, x_cat_b).squeeze(-1)
+                    loss = loss_fn(pred, y_b)
+                    loss.backward()
+                    optimizer.step()
+                    running_loss += float(loss.item()) * x_num_b.size(0)
+                    n_seen += x_num_b.size(0)
             train_loss = running_loss / max(n_seen, 1)
 
             # Val pass: chunked, no shuffle.
@@ -449,8 +783,14 @@ class PyTorchTrainer:
             preds_std: list[np.ndarray] = []
             with torch.no_grad():
                 for start in range(0, x_val_t.size(0), chunk):
-                    xb = x_val_t[start : start + chunk].to(self.device)
-                    out = model(xb).squeeze(-1)
+                    xb_num = x_val_t[start : start + chunk].to(self.device)
+                    if x_val_cat_t is None:
+                        out = model(xb_num).squeeze(-1)
+                    else:
+                        xb_cat = x_val_cat_t[start : start + chunk].to(
+                            self.device
+                        )
+                        out = model(xb_num, xb_cat).squeeze(-1)
                     preds_std.append(out.detach().cpu().numpy())
             pred_std_arr = np.concatenate(preds_std, axis=0)
             pred_log = pred_std_arr * self.y_log_std + self.y_log_mean
@@ -542,9 +882,9 @@ def save_bundle(
     instance. This keeps the joblib payload device-portable and survives
     the registered class being redefined between train and predict.
 
-    In Plan 1 ``kmeans`` and ``knn_builder`` are always ``None`` and
-    ``cat_cardinalities`` is ``[]``; the keys still exist in the schema
-    so Plans 2-4 won't have to migrate.
+    Plan 1 (``nn_v1``) leaves ``kmeans``/``knn_builder``/``cat_cardinalities``
+    empty; Plan 2 (``nn_v2``) populates all three. The keys live in the
+    schema unconditionally so callers don't have to migrate between plans.
     """
     state_dict_cpu = {
         k: v.detach().cpu().clone() for k, v in model.state_dict().items()
