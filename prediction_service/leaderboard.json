@@ -728,6 +728,72 @@
         "n_test": 5945,
         "n_features": 77
       }
+    },
+    {
+      "submission": "udi/blend_v1",
+      "timestamp": "2026-04-27T10:07:07+00:00",
+      "metrics": {
+        "mae": 276687.4986800883,
+        "rmse": 500944.09183666675,
+        "mape": 0.19723468334005465,
+        "r2": 0.8275676549272233,
+        "n": 5945
+      },
+      "metadata": {
+        "submission": "udi/blend_v1",
+        "seed": 42,
+        "data_version": "v2",
+        "git_sha": "8342675",
+        "trained_at": "2026-04-27T10:07:07+00:00",
+        "n_train": 47550,
+        "n_val": 5943,
+        "n_test": 5945,
+        "n_features": 77
+      }
+    },
+    {
+      "submission": "udi/nn_v3b",
+      "timestamp": "2026-04-27T10:19:41+00:00",
+      "metrics": {
+        "mae": 291978.82092488435,
+        "rmse": 527355.9215892431,
+        "mape": 0.21716513832702758,
+        "r2": 0.8089056393522214,
+        "n": 5945
+      },
+      "metadata": {
+        "submission": "udi/nn_v3b",
+        "seed": 42,
+        "data_version": "v2",
+        "git_sha": "8342675",
+        "trained_at": "2026-04-27T10:19:41+00:00",
+        "n_train": 47550,
+        "n_val": 5943,
+        "n_test": 5945,
+        "n_features": 77
+      }
+    },
+    {
+      "submission": "udi/nn_v3",
+      "timestamp": "2026-04-27T10:22:06+00:00",
+      "metrics": {
+        "mae": 310593.7636012405,
+        "rmse": 547260.144074681,
+        "mape": 0.2203488669214874,
+        "r2": 0.7942082985943067,
+        "n": 5945
+      },
+      "metadata": {
+        "submission": "udi/nn_v3",
+        "seed": 42,
+        "data_version": "v2",
+        "git_sha": "8342675",
+        "trained_at": "2026-04-27T10:22:06+00:00",
+        "n_train": 47550,
+        "n_val": 5943,
+        "n_test": 5945,
+        "n_features": 77
+      }
     }
   ]
 }
