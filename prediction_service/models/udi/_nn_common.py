@@ -6,8 +6,11 @@ Plan 2 extends the Plan 1 skeleton with: (a) ``TabularPreprocessor``
 ``fit_kmeans`` / ``KnnFeatureBuilder`` / ``oof_train_knn`` (verbatim
 copies from ``xgboost_v3.py`` so ``udi/`` stays self-contained); (c)
 ``PyTorchTrainer.fit`` cat-path extension (3-tuple ``TensorDataset`` +
-``model(x_num, x_cat)`` calls). SequentialLR + warmup is deferred to
-Plan 3.
+``model(x_num, x_cat)`` calls). Plan 3 layers an optional
+``SequentialLR(LinearLR + CosineAnnealingLR)`` warmup branch on the
+trainer (see ``PyTorchTrainer.__init__`` ``warmup_epochs`` kwarg);
+default ``warmup_epochs=0`` collapses back to Plan 1's single-Cosine
+schedule, so v1/v2 reruns are byte-identical within the ±0.001 noise band.
 
 Cold-load contract — IMPORTANT
 ------------------------------
@@ -47,6 +50,7 @@ from sklearn.model_selection import KFold  # pyright: ignore[reportMissingImport
 from sklearn.neighbors import BallTree  # pyright: ignore[reportMissingImports]
 from sklearn.preprocessing import QuantileTransformer  # pyright: ignore[reportMissingImports]
 from torch import nn
+from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 from torch.utils.data import DataLoader, TensorDataset
 
 # ---------------------------------------------------------------------------
@@ -627,7 +631,7 @@ class KnnFeatureBuilder:
 
 
 # ---------------------------------------------------------------------------
-# PyTorch trainer (no warmup yet — Plan 3 adds SequentialLR + LinearLR)
+# PyTorch trainer (Plan 3: optional SequentialLR(LinearLR + Cosine) warmup)
 # ---------------------------------------------------------------------------
 def _mape_real_scale(
     y_true: np.ndarray, y_pred: np.ndarray
@@ -668,6 +672,7 @@ class PyTorchTrainer:
         lr: float = 1e-3,
         weight_decay: float = 1e-4,
         patience: int = 15,
+        warmup_epochs: int = 0,
         artifact_dir: Path | None = None,
     ) -> None:
         self.device = device
@@ -677,12 +682,15 @@ class PyTorchTrainer:
         self.lr = lr
         self.weight_decay = weight_decay
         self.patience = patience
+        # warmup_epochs > 0 enables LinearLR(start_factor=0.1)→CosineAnnealingLR
+        # via SequentialLR. Constraint: caller must set n_epochs > warmup_epochs
+        # so the cosine T_max stays positive (torch raises otherwise).
+        self.warmup_epochs = int(warmup_epochs)
         self.artifact_dir = artifact_dir
         if artifact_dir is not None:
             artifact_dir.mkdir(parents=True, exist_ok=True)
         self.y_log_mean: float = 0.0
         self.y_log_std: float = 1.0
-        # TODO(plan-3): add ``warmup_epochs`` ctor arg + SequentialLR(LinearLR + Cosine)
 
     def fit(
         self,
@@ -730,13 +738,32 @@ class PyTorchTrainer:
             generator=self.generator,
         )
 
-        # 3. Optimizer + cosine LR schedule (no warmup in Plan 1).
+        # 3. Optimizer + LR schedule. With warmup_epochs > 0 (Plan 3+), the
+        #    schedule is SequentialLR(LinearLR(start=0.1·lr → 1.0·lr over
+        #    warmup_epochs) → CosineAnnealingLR(T_max=n_epochs-warmup_epochs)).
+        #    With the default warmup_epochs=0 this collapses to a single
+        #    CosineAnnealingLR(T_max=n_epochs) — bit-identical to Plan 1's
+        #    schedule, so v1/v2 reruns stay within the ±0.001 noise budget.
         optimizer = torch.optim.AdamW(
             model.parameters(), lr=self.lr, weight_decay=self.weight_decay
         )
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=self.n_epochs
-        )
+        if self.warmup_epochs > 0:
+            warm = LinearLR(
+                optimizer,
+                start_factor=0.1,
+                end_factor=1.0,
+                total_iters=self.warmup_epochs,
+            )
+            cos = CosineAnnealingLR(
+                optimizer, T_max=self.n_epochs - self.warmup_epochs
+            )
+            scheduler = SequentialLR(
+                optimizer,
+                schedulers=[warm, cos],
+                milestones=[self.warmup_epochs],
+            )
+        else:
+            scheduler = CosineAnnealingLR(optimizer, T_max=self.n_epochs)
         loss_fn = nn.MSELoss()
 
         # 4. Bookkeeping for early stopping.
