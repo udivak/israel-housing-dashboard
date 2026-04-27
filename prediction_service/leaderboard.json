@@ -596,6 +596,28 @@
         "n_test": 5945,
         "n_features": 77
       }
+    },
+    {
+      "submission": "udi/nn_v1",
+      "timestamp": "2026-04-26T17:26:51+00:00",
+      "metrics": {
+        "mae": 409563.4235137195,
+        "rmse": 659297.643766783,
+        "mape": 0.27717626127662515,
+        "r2": 0.701321979643001,
+        "n": 5945
+      },
+      "metadata": {
+        "submission": "udi/nn_v1",
+        "seed": 42,
+        "data_version": "v2",
+        "git_sha": "318b2da",
+        "trained_at": "2026-04-26T17:26:51+00:00",
+        "n_train": 47550,
+        "n_val": 5943,
+        "n_test": 5945,
+        "n_features": 77
+      }
     }
   ]
 }
