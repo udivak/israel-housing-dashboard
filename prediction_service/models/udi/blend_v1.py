@@ -74,13 +74,21 @@ def train(
     y_train: np.ndarray,
     X_val: pd.DataFrame,
     y_val: np.ndarray,
+    seed: int = 42,
 ) -> dict[str, Any]:
-    """Train both bases inline, grid-search ``alpha`` on val, return bundle."""
-    print("  [blend_v1] training xgboost_v3 base...")
-    xgb_bundle = xgboost_v3.train(X_train, y_train, X_val, y_val)
+    """Train both bases inline, grid-search ``alpha`` on val, return bundle.
 
-    print("  [blend_v1] training nn_v3 base...")
-    nn_bundle = nn_v3.train(X_train, y_train, X_val, y_val)
+    Stage B.1 of cv-and-align plan: ``seed`` propagates into both inline
+    base trainings (``xgboost_v3.train(..., seed=seed)`` and
+    ``nn_v3.train(..., seed=seed)``) so a CV harness gets full-pipeline
+    variance per seed. Default 42 keeps the existing leaderboard row
+    bit-identical-within-±5e-4 MAPE.
+    """
+    print(f"  [blend_v1] training xgboost_v3 base (seed={seed})...")
+    xgb_bundle = xgboost_v3.train(X_train, y_train, X_val, y_val, seed=seed)
+
+    print(f"  [blend_v1] training nn_v3 base (seed={seed})...")
+    nn_bundle = nn_v3.train(X_train, y_train, X_val, y_val, seed=seed)
 
     print("  [blend_v1] scoring bases on val for alpha grid search...")
     p_xgb_val = xgboost_v3.predict(xgb_bundle, X_val)

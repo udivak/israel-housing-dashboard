@@ -46,9 +46,16 @@ def run(submission: str, seed: int = 42, data_version: str = "v1") -> None:
     module_path = f"models.{person}.{model_name}"
 
     data_module_name = "common.data_v2" if data_version == "v2" else "common.data"
-    print(f"▶ Loading data ({data_module_name})...")
+    print(f"▶ Loading data ({data_module_name}, seed={seed})...")
     data_mod = importlib.import_module(data_module_name)
-    X_train, y_train, X_val, y_val, X_test, y_test = data_mod.load_data()
+    try:
+        X_train, y_train, X_val, y_val, X_test, y_test = data_mod.load_data(seed=seed)
+    except TypeError:
+        print(
+            f"   ⚠️ {data_module_name}.load_data() doesn't accept seed=; "
+            f"falling back to no-arg call (split seed pinned to loader default)."
+        )
+        X_train, y_train, X_val, y_val, X_test, y_test = data_mod.load_data()
     print(f"   train={len(X_train):,}   val={len(X_val):,}   test={len(X_test):,}")
 
     print(f"▶ Importing {module_path}...")

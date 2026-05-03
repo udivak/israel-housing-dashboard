@@ -205,9 +205,18 @@ def train(
     y_train: np.ndarray,
     X_val: pd.DataFrame,
     y_val: np.ndarray,
+    seed: int = SEED,
 ) -> dict[str, Any]:
-    """Train ``ResNetTabular`` over the v2 feature pipeline + return a joblib-able bundle."""
-    gen = set_global_seeds(SEED)
+    """Train ``ResNetTabular`` over the v2 feature pipeline + return a joblib-able bundle.
+
+    Stage B.1 of cv-and-align plan: ``seed`` threads into
+    ``set_global_seeds(seed)`` (Python/NumPy/Torch RNG + DataLoader
+    generator), ``fit_kmeans(seed=seed)``, ``oof_train_knn(seed=seed)``,
+    and ``TabularPreprocessor(seed=seed)`` (QuantileTransformer
+    random_state). Default keeps existing single-seed runs bit-identical
+    within ±5e-4 MAPE.
+    """
+    gen = set_global_seeds(seed)
 
     y_train_arr = np.asarray(y_train, dtype=float)
     y_val_arr = np.asarray(y_val, dtype=float)
@@ -220,7 +229,7 @@ def train(
 
     # 2. KMeans on train coords only — geo_cluster is required by the
     #    preprocessor's cat path.
-    kmeans = fit_kmeans(X_train_a)
+    kmeans = fit_kmeans(X_train_a, seed=seed)
     if kmeans is None:
         raise RuntimeError(
             "nn_v3 requires geo_cluster — fit_kmeans returned None "
@@ -233,7 +242,7 @@ def train(
 
     # 4. GeoKNN: 5-fold OOF for train, BallTree on full-train for val.
     print("  [nn_v3] computing OOF GeoKNN features for train...")
-    train_knn = oof_train_knn(X_train_eng, y_train_arr)
+    train_knn = oof_train_knn(X_train_eng, y_train_arr, seed=seed)
     print("  [nn_v3] fitting KNN BallTree on full train + transforming val...")
     knn_builder = KnnFeatureBuilder()
     knn_builder.fit(X_train_eng, y_train_arr)
@@ -257,7 +266,7 @@ def train(
     # 6. Preprocessor with cat path: snapshots cat_categories +
     #    cat_cardinalities for each of the 4 cat cols and the slot-0
     #    unknown encoding kicks in on transform.
-    pre = TabularPreprocessor(include_categorical=True)
+    pre = TabularPreprocessor(include_categorical=True, seed=seed)
     pre.fit(X_train_full)
     X_num_train, X_cat_train, cards = pre.transform(X_train_full)
     X_num_val, X_cat_val, _ = pre.transform(X_val_full)

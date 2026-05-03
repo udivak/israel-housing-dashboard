@@ -102,7 +102,9 @@ def _pick_device() -> torch.device:
 
 
 def _safe_device_with_fallback(
-    model: nn.Module, sample_batch: torch.Tensor, n_probe_steps: int = 5
+    model: nn.Module,
+    sample_batch: torch.Tensor | tuple[torch.Tensor, ...] | list[torch.Tensor],
+    n_probe_steps: int = 5,
 ) -> torch.device:
     """Probe ``_pick_device()`` with a few train-mode steps; fall back to CPU on non-finite.
 
@@ -125,9 +127,25 @@ def _safe_device_with_fallback(
     * BN running stats are restored to their post-construction defaults
       (clean training start).
     * The model's ``training`` flag is restored to its on-entry value.
+
+    ``sample_batch`` accepts either a single ``torch.Tensor`` (v1/v2/v3/v3b
+    1-arg-forward path) or a ``tuple``/``list`` of tensors (v4+ multi-arg
+    forward path; FT-Transformer takes ``(x_num, x_cat)``). When passed a
+    single Tensor, the in-device probe call collapses to
+    ``model(sample_on_device)`` — byte-identical to the pre-extension
+    behaviour, so v1/v2/v3/v3b probes are unchanged.
     """
     picked = _pick_device()
     was_training = model.training
+
+    # Normalise sample_batch to a tuple so the in-device probe can dispatch
+    # ``model(*sample_on_device)`` uniformly. Single-Tensor path collapses
+    # to ``model(sample,)`` ≡ ``model(sample)`` byte-identically.
+    sample_seq: tuple[torch.Tensor, ...] = (
+        tuple(sample_batch)
+        if isinstance(sample_batch, (tuple, list))
+        else (sample_batch,)
+    )
 
     # CPU never blows up on BN1d — skip the probe entirely.
     if picked.type == "cpu":
@@ -162,8 +180,8 @@ def _safe_device_with_fallback(
 
     try:
         model.to(picked)
-        sample_on_device = sample_batch.to(picked)
-        target = torch.zeros(sample_on_device.size(0), 1, device=picked)
+        sample_on_device = tuple(t.to(picked) for t in sample_seq)
+        target = torch.zeros(sample_on_device[0].size(0), 1, device=picked)
 
         opt = torch.optim.AdamW(model.parameters(), lr=1e-3)
         loss_fn = nn.MSELoss()
@@ -171,7 +189,7 @@ def _safe_device_with_fallback(
         model.train()
         for step in range(n_probe_steps):
             opt.zero_grad(set_to_none=True)
-            out = model(sample_on_device)
+            out = model(*sample_on_device)
             if out.dim() == 1:
                 out = out.unsqueeze(-1)
             loss = loss_fn(out, target)
@@ -268,8 +286,16 @@ class TabularPreprocessor:
       ``num_embeddings = card + 1``.
     """
 
-    def __init__(self, include_categorical: bool = True) -> None:
+    def __init__(
+        self, include_categorical: bool = True, seed: int = RANDOM_STATE
+    ) -> None:
         self.include_categorical = include_categorical
+        # Stage B.1 of cv-and-align plan: ``seed`` threads into
+        # ``QuantileTransformer.random_state`` inside :meth:`fit`. Default
+        # ``seed=RANDOM_STATE`` (=42) so existing v1/v2/v3/v3b/v4 callers
+        # that don't pass ``seed`` keep producing bit-identical quantile
+        # boundaries (and therefore bit-identical predictions).
+        self._seed = int(seed)
         self._numeric_cols: list[str] = []
         self._nan_indicator_cols: list[str] = []
         self._imputer: SimpleImputer | None = None
@@ -329,7 +355,7 @@ class TabularPreprocessor:
         imputed = self._imputer.fit_transform(X_num)
 
         self._quantile = QuantileTransformer(
-            output_distribution="normal", n_quantiles=1000, random_state=42
+            output_distribution="normal", n_quantiles=1000, random_state=self._seed
         )
         self._quantile.fit(imputed)
 
@@ -468,15 +494,21 @@ def build_engineered_features(
     return X
 
 
-def fit_kmeans(X_train: pd.DataFrame) -> KMeans | None:
-    """Fit ``KMeans(n_clusters=64)`` on train ``(lat, lon)``; ``None`` if coords missing."""
+def fit_kmeans(X_train: pd.DataFrame, seed: int = RANDOM_STATE) -> KMeans | None:
+    """Fit ``KMeans(n_clusters=64)`` on train ``(lat, lon)``; ``None`` if coords missing.
+
+    Stage B.1 of cv-and-align plan: ``seed`` threads into
+    ``KMeans(random_state=seed)`` so a 5-seed CV harness can vary the
+    full pipeline rather than freeze cluster centroids across folds.
+    Default keeps existing single-seed runs bit-identical.
+    """
     if "lat" not in X_train.columns or "lon" not in X_train.columns:
         return None
     coords = X_train[["lat", "lon"]].astype(float).values
     valid = ~np.isnan(coords).any(axis=1)
     if valid.sum() < N_CLUSTERS:
         return None
-    km = KMeans(n_clusters=N_CLUSTERS, n_init="auto", random_state=RANDOM_STATE)
+    km = KMeans(n_clusters=N_CLUSTERS, n_init="auto", random_state=int(seed))
     km.fit(coords[valid])
     return km
 
@@ -548,12 +580,20 @@ def _empty_knn_features(n: int) -> dict[str, np.ndarray]:
     }
 
 
-def oof_train_knn(X: pd.DataFrame, y: np.ndarray) -> pd.DataFrame:
+def oof_train_knn(
+    X: pd.DataFrame, y: np.ndarray, seed: int = RANDOM_STATE
+) -> pd.DataFrame:
     """5-fold OOF GeoKNN features for train (no row sees its own neighbour set).
 
     Renamed from ``xgboost_v3._oof_train_knn`` (private) to public so it
     can be imported directly from ``models/udi/nn_v2.py``. Body otherwise
     identical to the xgboost_v3 implementation.
+
+    Stage B.1 of cv-and-align plan: ``seed`` threads into the OOF
+    ``KFold(random_state=seed)`` so a 5-seed CV harness gets different
+    fold partitions per seed (otherwise OOF KNN price features would be
+    frozen across CV seeds and the harness would only measure split
+    variance). Default keeps existing single-seed runs bit-identical.
     """
     n = len(X)
     feats = _empty_knn_features(n)
@@ -568,7 +608,7 @@ def oof_train_knn(X: pd.DataFrame, y: np.ndarray) -> pd.DataFrame:
     y_float = y.astype(float)
 
     has_idx = np.where(has)[0]
-    kf = KFold(n_splits=N_KNN_FOLDS, shuffle=True, random_state=RANDOM_STATE)
+    kf = KFold(n_splits=N_KNN_FOLDS, shuffle=True, random_state=int(seed))
     for ref_local, qry_local in kf.split(has_idx):
         ref_idx = has_idx[ref_local]
         qry_idx = has_idx[qry_local]
@@ -674,6 +714,7 @@ class PyTorchTrainer:
         patience: int = 15,
         warmup_epochs: int = 0,
         artifact_dir: Path | None = None,
+        grad_clip: float | None = None,
     ) -> None:
         self.device = device
         self.generator = generator
@@ -687,6 +728,11 @@ class PyTorchTrainer:
         # so the cosine T_max stays positive (torch raises otherwise).
         self.warmup_epochs = int(warmup_epochs)
         self.artifact_dir = artifact_dir
+        # Plan 4: optional clip_grad_norm_ before optimizer.step(). Default
+        # ``None`` is a no-op so v1/v2/v3/v3b reruns stay bit-identical;
+        # nn_v4 sets ``grad_clip=1.0`` (standard transformer recipe) to
+        # prevent gradient explosions during the warmup ramp.
+        self.grad_clip = grad_clip
         if artifact_dir is not None:
             artifact_dir.mkdir(parents=True, exist_ok=True)
         self.y_log_mean: float = 0.0
@@ -777,7 +823,15 @@ class PyTorchTrainer:
 
         for epoch in range(1, self.n_epochs + 1):
             model.train()
-            running_loss = 0.0
+            # Plan 4: accumulate running_loss as a 0-dim device tensor
+            # instead of calling ``.item()`` per batch. On MPS, ``.item()``
+            # forces a full pipeline sync (waitUntilCompleted) every batch
+            # and dominated profile time on the FT-Transformer (60% of
+            # samples were stuck in MPS sync waits). The tensor-accumulator
+            # form is bit-identical to the previous ``running_loss += float(loss.item()) * bs``
+            # — just one ``.item()`` at end of epoch — so v1/v2/v3 reruns
+            # stay within the ±0.001 noise budget.
+            running_loss_t = torch.zeros((), device=self.device)
             n_seen = 0
             if X_cat_train is None:
                 for x_b, y_b in train_loader:
@@ -787,8 +841,12 @@ class PyTorchTrainer:
                     pred = model(x_b).squeeze(-1)
                     loss = loss_fn(pred, y_b)
                     loss.backward()
+                    if self.grad_clip is not None:
+                        torch.nn.utils.clip_grad_norm_(
+                            model.parameters(), max_norm=self.grad_clip
+                        )
                     optimizer.step()
-                    running_loss += float(loss.item()) * x_b.size(0)
+                    running_loss_t = running_loss_t + loss.detach() * x_b.size(0)
                     n_seen += x_b.size(0)
             else:
                 for x_num_b, x_cat_b, y_b in train_loader:
@@ -799,10 +857,16 @@ class PyTorchTrainer:
                     pred = model(x_num_b, x_cat_b).squeeze(-1)
                     loss = loss_fn(pred, y_b)
                     loss.backward()
+                    if self.grad_clip is not None:
+                        torch.nn.utils.clip_grad_norm_(
+                            model.parameters(), max_norm=self.grad_clip
+                        )
                     optimizer.step()
-                    running_loss += float(loss.item()) * x_num_b.size(0)
+                    running_loss_t = (
+                        running_loss_t + loss.detach() * x_num_b.size(0)
+                    )
                     n_seen += x_num_b.size(0)
-            train_loss = running_loss / max(n_seen, 1)
+            train_loss = float(running_loss_t.item()) / max(n_seen, 1)
 
             # Val pass: chunked, no shuffle.
             model.eval()

@@ -1,4 +1,14 @@
 """
+⚠️ LOADER BUG (read me first):
+    `real_price` / `price_index` / `real_price_factor` are NOT written by the
+    upstream `pre_processing/` pipeline, so :func:`clean` falls back to the
+    nominal `price` column as the target. Models trained on this loader
+    therefore predict NOMINAL prices, NOT CPI-adjusted real prices. This makes
+    direct MAPE comparison against `data.py`/moses models invalid. For a
+    canonical cross-loader ranking that CPI-converts udi predictions before
+    scoring, see ``artifacts/cross_eval.json`` (produced by
+    ``scripts/cross_eval.py``).
+
 Loader v2 — שלוש שכבות במקום שתיים.
 
 שכבות:
@@ -465,7 +475,13 @@ def build_dataset() -> pd.DataFrame:
     return cleaned
 
 
-def load_data():
-    """entry point ל-runner. מחזיר X_train, y_train, X_val, y_val, X_test, y_test."""
+def load_data(seed: int = 42):
+    """entry point ל-runner. מחזיר X_train, y_train, X_val, y_val, X_test, y_test.
+
+    ``seed`` controls the random 80/10/10 split via :func:`split`. Default
+    (42) keeps every existing run bit-identical to its leaderboard row.
+    Stage A of the cv-and-align plan threads this through so
+    ``run.py --seed N`` actually changes the split (not just metadata).
+    """
     df = build_dataset()
-    return split(df)
+    return split(df, seed=seed)

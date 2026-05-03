@@ -278,8 +278,15 @@ def _empty_knn_features(n: int) -> dict[str, np.ndarray]:
     }
 
 
-def _oof_train_knn(X: pd.DataFrame, y: np.ndarray) -> pd.DataFrame:
-    """5-fold OOF GeoKNN ל-train. NaN-coords → NaN פיצ'ר."""
+def _oof_train_knn(
+    X: pd.DataFrame, y: np.ndarray, seed: int = RANDOM_STATE
+) -> pd.DataFrame:
+    """5-fold OOF GeoKNN ל-train. NaN-coords → NaN פיצ'ר.
+
+    ``seed`` נשלח ל-``KFold(random_state=seed)``: בלעדיו ה-CV harness של
+    Stage B היה מקבל אותם folds לכל seed (= מודד רק split variance ולא
+    full-pipeline variance).
+    """
     n = len(X)
     feats = _empty_knn_features(n)
     has = _has_coords(X)
@@ -293,7 +300,7 @@ def _oof_train_knn(X: pd.DataFrame, y: np.ndarray) -> pd.DataFrame:
     y_float = y.astype(float)
 
     has_idx = np.where(has)[0]
-    kf = KFold(n_splits=N_KNN_FOLDS, shuffle=True, random_state=RANDOM_STATE)
+    kf = KFold(n_splits=N_KNN_FOLDS, shuffle=True, random_state=int(seed))
     for ref_local, qry_local in kf.split(has_idx):
         ref_idx = has_idx[ref_local]
         qry_idx = has_idx[qry_local]
@@ -362,14 +369,14 @@ def _drop_dead(X: pd.DataFrame, dropped_cols: list[str]) -> pd.DataFrame:
     return X.drop(columns=[c for c in dropped_cols if c in X.columns])
 
 
-def _fit_kmeans(X_train: pd.DataFrame) -> KMeans | None:
+def _fit_kmeans(X_train: pd.DataFrame, seed: int = RANDOM_STATE) -> KMeans | None:
     if "lat" not in X_train.columns or "lon" not in X_train.columns:
         return None
     coords = X_train[["lat", "lon"]].astype(float).values
     valid = ~np.isnan(coords).any(axis=1)
     if valid.sum() < N_CLUSTERS:
         return None
-    km = KMeans(n_clusters=N_CLUSTERS, n_init="auto", random_state=RANDOM_STATE)
+    km = KMeans(n_clusters=N_CLUSTERS, n_init="auto", random_state=int(seed))
     km.fit(coords[valid])
     return km
 
@@ -382,8 +389,16 @@ def train(
     y_train: np.ndarray,
     X_val: pd.DataFrame,
     y_val: np.ndarray,
+    seed: int = RANDOM_STATE,
 ) -> dict[str, Any]:
-    """אימון של כל ה-candidates על pipeline המורחב."""
+    """אימון של כל ה-candidates על pipeline המורחב.
+
+    Stage B.1 of cv-and-align plan: ``seed`` נשלח לכל מקום stochastic ב-pipeline:
+    ``_fit_kmeans`` (KMeans random_state), ``_oof_train_knn`` (KFold random_state),
+    וכל ``XGBRegressor`` דרך deep-copy של ``COMMON`` עם override של
+    ``random_state``. ברירת מחדל ``RANDOM_STATE`` (=42) שומרת על תוצאה
+    bit-identical-within-±5e-4 מול הריצה הקיימת בלוח התוצאות.
+    """
     y_train_log = np.log1p(y_train)
     y_val_log = np.log1p(y_val)
 
@@ -394,7 +409,7 @@ def train(
     )
 
     # 2. KMeans על lat/lon של train בלבד — אחרת geo_cluster של test לא יציב.
-    kmeans = _fit_kmeans(X_train_a)
+    kmeans = _fit_kmeans(X_train_a, seed=seed)
     if kmeans is None:
         print("  [xgboost_v3] ⚠️ KMeans skipped (insufficient lat/lon coverage)")
 
@@ -404,7 +419,7 @@ def train(
 
     # 4. KNN: OOF ל-train, builder על full-train ל-val.
     print("  [xgboost_v3] computing OOF GeoKNN features for train...")
-    train_knn = _oof_train_knn(X_train_a, y_train)
+    train_knn = _oof_train_knn(X_train_a, y_train, seed=seed)
     print("  [xgboost_v3] fitting KNN BallTree on full train + transforming val...")
     knn_builder = KnnFeatureBuilder()
     knn_builder.fit(X_train_a, y_train)
@@ -430,10 +445,16 @@ def train(
     best_result: dict[str, Any] | None = None
     results: list[dict[str, Any]] = []
 
+    # Deep-copy COMMON per-fit so the seed override doesn't mutate the
+    # module-level dict (a future caller could pass seed=43 and the next
+    # fit on seed=42 would silently inherit 43). dict-spread is shallow
+    # but COMMON values are scalars/strings only, so shallow is fine.
+    common_seeded = {**COMMON, "random_state": int(seed)}
+
     for name, params in CANDIDATES:
         print(f"  [xgboost_v3] training {name}...")
         booster = XGBRegressor(
-            **COMMON,
+            **common_seeded,
             eval_metric=mape_real_scale,
             callbacks=[
                 EarlyStopping(rounds=EARLY_STOPPING_ROUNDS, maximize=False)
