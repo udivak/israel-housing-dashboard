@@ -52,7 +52,7 @@ COORDS_CSV = _find("features_coords.csv", "COORDS_CSV")
 # ---------------------------------------------------------------------------
 # Target + feature lists
 # ---------------------------------------------------------------------------
-TARGET = "real_price"
+TARGET = "log_price"
 
 # עמודות שאסור להכניס למודל (מכילות/נגזרות מה-target → leakage, או זיהוי)
 LEAKAGE_COLS = {
@@ -61,9 +61,13 @@ LEAKAGE_COLS = {
     "real_price",
     "real_price_per_sqm",
     "real_price_factor",
-    "log_price",
+    "real_price_per_sqm_real",
     "log_price_per_sqm",
     "log_real_price",
+    "price_per_sqm_real",
+    "price_index",
+    "annual_change",
+    "real_price_factor",
 }
 ID_COLS = {"_id", "source_name", "neighborhood", "street",
            "project_name", "transaction_date"}
@@ -101,10 +105,12 @@ WINSOR_HIGH = 0.99
 # Loading layers
 # ---------------------------------------------------------------------------
 def load_temporal(path: Path = TEMPORAL_XLSX) -> pd.DataFrame:
-    """טוען את temporal_features.xlsx (sheet 'transactions')."""
+    """טוען את temporal_features.xlsx."""
     _log(f"loading temporal xlsx ({path.name}, {path.stat().st_size/1e6:.1f}MB)...")
     t0 = time.time()
-    df = pd.read_excel(path, sheet_name="transactions")
+    xl = pd.ExcelFile(path)
+    sheet = "transactions" if "transactions" in xl.sheet_names else xl.sheet_names[0]
+    df = pd.read_excel(xl, sheet_name=sheet)
     df["_id"] = df["_id"].astype(str)
     df["transaction_date"] = pd.to_datetime(df["transaction_date"], errors="coerce")
     _log(f"  → {len(df):,} rows × {df.shape[1]} cols  ({time.time()-t0:.1f}s)")
@@ -220,7 +226,8 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
     _log(f"  after target not-null:   {len(df):>8,}  (dropped {n-len(df):,})")
     n = len(df)
 
-    df = df[df["transaction_date"].notna() & (df["transaction_date"] >= MIN_DATE)]
+    date_ok = df["transaction_date"].isna() | (df["transaction_date"] >= MIN_DATE)
+    df = df[date_ok]
     _log(f"  after date >= {MIN_DATE.date()}: {len(df):>8,}  (dropped {n-len(df):,})")
     n = len(df)
 
@@ -300,10 +307,13 @@ def build_dataset() -> pd.DataFrame:
     return cleaned
 
 
-def load_data():
+def load_data(seed: int = 42):
     """
     ה-entry point של ה-runner. מריץ הכל ומחזיר:
         X_train, y_train, X_val, y_val, X_test, y_test
+
+    ``seed`` נשלח לתוך :func:`split`. ברירת מחדל 42 שומרת על reproducibility
+    מול הריצות הקיימות בלוח התוצאות; ``run.py --seed N`` מאפשר להעביר ערך אחר.
     """
     df = build_dataset()
-    return split(df)
+    return split(df, seed=seed)
