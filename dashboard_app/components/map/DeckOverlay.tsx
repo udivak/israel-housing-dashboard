@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import { H3HexagonLayer } from "@deck.gl/geo-layers";
 import { ScatterplotLayer } from "@deck.gl/layers";
 import type { ClusterCell, MapDataResponse, PointFeature } from "@/lib/api/types";
 
@@ -27,8 +26,15 @@ function colorFor(value: number, vmin: number, vmax: number): [number, number, n
   const t = Math.max(0, Math.min(1, (value - vmin) / (vmax - vmin)));
   const idx = Math.min(RAMP.length - 1, Math.floor(t * RAMP.length));
   const [r, g, b] = RAMP[idx];
-  return [r, g, b, 200];
+  return [r, g, b, 220];
 }
+
+// resolution (decimals) -> default cluster radius in meters
+const RADIUS_BY_DECIMALS: Record<number, number> = {
+  1: 5500,
+  2: 550,
+  3: 55,
+};
 
 export function DeckOverlay({ map, data, onPointClick }: DeckOverlayProps) {
   const overlayRef = useRef<MapboxOverlay | null>(null);
@@ -41,20 +47,26 @@ export function DeckOverlay({ map, data, onPointClick }: DeckOverlayProps) {
       const values = cells.map((c) => c.median_price_per_sqm as number).sort((a, b) => a - b);
       const vmin = values[Math.floor(values.length * 0.05)] ?? 0;
       const vmax = values[Math.floor(values.length * 0.95)] ?? 1;
+      const counts = data.cells.map((c) => c.count);
+      const cmax = Math.max(1, ...counts);
+      const baseRadius = RADIUS_BY_DECIMALS[data.resolution] ?? 500;
       return [
-        new H3HexagonLayer<ClusterCell>({
-          id: "h3-clusters",
+        new ScatterplotLayer<ClusterCell>({
+          id: "grid-clusters",
           data: data.cells,
           pickable: true,
-          extruded: false,
-          filled: true,
           stroked: true,
+          filled: true,
+          radiusUnits: "meters",
+          radiusMinPixels: 6,
+          radiusMaxPixels: 60,
           lineWidthMinPixels: 1,
-          getHexagon: (d) => d.h3,
+          getPosition: (d) => [d.lng, d.lat],
+          getRadius: (d) => baseRadius * (0.4 + 0.6 * Math.sqrt(d.count / cmax)),
           getFillColor: (d) => colorFor(d.median_price_per_sqm ?? 0, vmin, vmax),
-          getLineColor: [255, 255, 255, 60],
+          getLineColor: [255, 255, 255, 80],
           opacity: 0.75,
-          updateTriggers: { getFillColor: [vmin, vmax] },
+          updateTriggers: { getFillColor: [vmin, vmax], getRadius: [cmax, baseRadius] },
         }),
       ];
     }

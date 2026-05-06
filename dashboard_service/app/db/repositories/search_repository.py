@@ -7,7 +7,7 @@ from typing import Any
 
 from app.db.mongo import get_db
 
-COLLECTION_NAME = os.getenv("FEATURES_COLLECTION", "features_enriched")
+COLLECTION_NAME = os.getenv("FEATURES_COLLECTION", "normalized_records")
 
 
 class SearchRepository:
@@ -59,15 +59,17 @@ class SearchRepository:
         limit: int = 10,
         exclude_id: Any | None = None,
     ) -> list[dict[str, Any]]:
+        # Approximate BBox around the target point (cheaper than $nearSphere
+        # and works without a GeoJSON geometry / 2dsphere index).
+        # 1 deg latitude ~ 111km; 1 deg longitude ~ 111km * cos(lat).
+        import math
+        dlat = radius_meters / 111_000
+        dlng = radius_meters / (111_000 * max(0.1, math.cos(math.radians(lat))))
         match: dict[str, Any] = {
-            "geometry": {
-                "$nearSphere": {
-                    "$geometry": {"type": "Point", "coordinates": [lng, lat]},
-                    "$maxDistance": radius_meters,
-                }
-            }
+            "lat": {"$gte": lat - dlat, "$lte": lat + dlat, "$ne": None},
+            "lon": {"$gte": lng - dlng, "$lte": lng + dlng, "$ne": None},
         }
         if exclude_id is not None:
             match["_id"] = {"$ne": exclude_id}
-        cursor = self._coll.find(match).limit(limit)
-        return await cursor.to_list(length=limit)
+        cursor = self._coll.find(match).limit(limit * 3)
+        return await cursor.to_list(length=limit * 3)

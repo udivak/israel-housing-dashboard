@@ -10,7 +10,7 @@ from app.db.mongo import get_db
 from app.models.map import MapFilters
 from app.db.repositories.features_repository import _filters_to_query
 
-COLLECTION_NAME = os.getenv("FEATURES_COLLECTION", "features_enriched")
+COLLECTION_NAME = os.getenv("FEATURES_COLLECTION", "normalized_records")
 
 
 class StatsRepository:

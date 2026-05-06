@@ -1,13 +1,17 @@
-import { Sparkles } from "lucide-react";
+import { ModelsList } from "@/components/ai/ModelsList";
+import { PredictPlayground } from "@/components/ai/PredictPlayground";
 
 export default function AIPage() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-      <Sparkles className="h-16 w-16 text-violet-500/50 mb-4" />
-      <h2 className="text-2xl font-semibold text-white">AI Modules</h2>
-      <p className="mt-2 text-zinc-400 max-w-md">
-        AI-powered insights, predictions, and recommendations coming soon.
-      </p>
+    <div dir="rtl" className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-2xl font-semibold text-white">AI · ניבוי מחירים</h1>
+        <p className="text-sm text-zinc-400">
+          מגרש משחקים לניסוי מודלים, השוואה בין מאמנים, וצפייה בביצועי המודלים.
+        </p>
+      </div>
+      <PredictPlayground />
+      <ModelsList />
     </div>
   );
 }

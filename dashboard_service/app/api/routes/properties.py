@@ -5,11 +5,21 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from bson import ObjectId
+from bson.errors import InvalidId
 from fastapi import APIRouter, HTTPException, Query
 
 from app.db.repositories.features_repository import _filters_to_query
 from app.db.repositories.search_repository import SearchRepository
 from app.models.map import MapFilters
+
+
+def _id_or_str(s: str) -> Any:
+    """Try ObjectId, fall back to raw string."""
+    try:
+        return ObjectId(s)
+    except (InvalidId, TypeError):
+        return s
 
 router = APIRouter(prefix="/properties", tags=["Properties"])
 
@@ -78,7 +88,7 @@ async def autocomplete(q: str = Query(..., min_length=2), limit: int = Query(10,
 @router.get("/{property_id}")
 async def get_property(property_id: str):
     repo = SearchRepository()
-    doc = await repo.get_by_id(property_id)
+    doc = await repo.get_by_id(_id_or_str(property_id))
     if doc is None:
         raise HTTPException(404, f"Property {property_id} not found")
     return _serialize(doc)
@@ -91,13 +101,15 @@ async def get_similar(
     limit: int = Query(10, ge=1, le=50),
 ):
     repo = SearchRepository()
-    target = await repo.get_by_id(property_id)
+    target_id = _id_or_str(property_id)
+    target = await repo.get_by_id(target_id)
     if target is None:
         raise HTTPException(404, f"Property {property_id} not found")
-    geom = target.get("geometry") or {}
-    coords = geom.get("coordinates")
-    if not coords or len(coords) < 2:
-        raise HTTPException(400, "Property has no geometry")
+    lat = target.get("lat")
+    lng = target.get("lon")
+    if lat is None or lng is None:
+        raise HTTPException(400, "Property has no coordinates")
+    coords = [lng, lat]
     rows = await repo.similar_in_radius(
         lng=coords[0], lat=coords[1], radius_meters=radius,
         limit=limit, exclude_id=target["_id"],

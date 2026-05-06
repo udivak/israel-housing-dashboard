@@ -1,6 +1,13 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
+# Auto-load .env so targets that run scripts directly (e.g. load-mongo) get
+# the same vars docker-compose sees.
+ifneq (,$(wildcard .env))
+include .env
+export
+endif
+
 help:                          ## הצגת רשימת הפקודות
 	@grep -E '^[a-zA-Z_.-]+:.*?##' $(MAKEFILE_LIST) | awk -F':.*?##' '{printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 

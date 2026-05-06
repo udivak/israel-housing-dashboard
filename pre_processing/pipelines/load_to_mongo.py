@@ -45,6 +45,27 @@ COLLECTION = os.getenv("FEATURES_COLLECTION", "features_enriched")
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", "2000"))
 H3_RESOLUTIONS = [int(x) for x in os.getenv("H3_RESOLUTIONS", "5,7,8").split(",")]
 
+# SLIM_MODE keeps only fields the dashboard actually displays/queries.
+# Set SLIM_MODE=false to upload all features (requires ~1.5GB on Atlas).
+# Default: true — fits in Atlas free tier (~150MB total).
+SLIM_MODE = os.getenv("SLIM_MODE", "true").lower() in {"1", "true", "yes", "y"}
+
+# Fields kept in slim mode. Used for: map clustering, search/filter,
+# property card, prediction (essential subset that fits in 512MB).
+SLIM_KEEP = {
+    "_id",
+    # location
+    "city", "neighborhood", "street", "settlmentID",
+    # transaction
+    "transaction_date", "year", "quarter", "month", "source_name", "deal_nature",
+    # core property
+    "price", "price_per_sqm", "area_sqm", "rooms", "floor", "building_floors",
+    "year_built", "property_age", "is_new_build", "is_old_build", "floor_ratio",
+    "log_price", "log_area_sqm",
+    # macro (small, useful for prediction context)
+    "real_price", "real_price_per_sqm", "cpi_general", "prime_rate",
+}
+
 
 def _clean_value(v):
     """Mongo-safe scalar: NaN/Inf -> None."""
@@ -60,7 +81,10 @@ def _doc_from_row(row: pd.Series) -> dict | None:
     lon, lat = row.get("lon"), row.get("lat")
     has_geom = pd.notna(lon) and pd.notna(lat)
 
-    base: dict = {k: _clean_value(v) for k, v in row.items() if k not in ("lon", "lat")}
+    if SLIM_MODE:
+        base: dict = {k: _clean_value(row[k]) for k in SLIM_KEEP if k in row.index}
+    else:
+        base = {k: _clean_value(v) for k, v in row.items() if k not in ("lon", "lat")}
 
     if has_geom:
         lon_f, lat_f = float(lon), float(lat)
@@ -149,6 +173,7 @@ def main() -> int:
         return 1
 
     log.info("Mongo: %s db=%s collection=%s", MONGO_URI, DB_NAME, COLLECTION)
+    log.info("SLIM_MODE=%s (keeping %d fields)", SLIM_MODE, len(SLIM_KEEP) if SLIM_MODE else -1)
     client = MongoClient(MONGO_URI)
     db = client[DB_NAME]
     coll = db[COLLECTION]

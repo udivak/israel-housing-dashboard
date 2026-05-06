@@ -7,6 +7,7 @@ import { fetchApi } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { useModels } from "@/hooks/useProperty";
 import type { PropertyDoc } from "@/hooks/useProperty";
+import { modelDisplayName } from "@/lib/model-utils";
 
 interface PredictResponse {
   predicted_log_price: number;
@@ -126,7 +127,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
             <option value="">Champion (ברירת מחדל)</option>
             {models.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.id}
+                {modelDisplayName(m.id)}
               </option>
             ))}
           </select>
@@ -150,7 +151,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
 
       {!compareMode && single.data && (
         <div className="rounded-md border border-cyan-500/30 bg-cyan-500/10 p-3">
-          <div className="text-xs text-zinc-400">תחזית · {single.data.model}</div>
+          <div className="text-xs text-zinc-400">תחזית · {modelDisplayName(single.data.model)}</div>
           <div className="mt-1 text-2xl font-semibold text-white">{fmtCurrency(single.data.predicted_price)}</div>
           {property.price != null && (
             <div className="mt-1 text-xs text-zinc-400">
@@ -181,7 +182,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
                 key={it.model}
                 className="flex items-center justify-between rounded-md border border-white/10 bg-zinc-950/40 px-3 py-2 text-xs"
               >
-                <span className="text-zinc-300">{it.model}</span>
+                <span className="text-zinc-300">{modelDisplayName(it.model)}</span>
                 {it.error ? (
                   <span className="text-rose-400">שגיאה</span>
                 ) : (
