@@ -1,0 +1,73 @@
+[
+  {
+    "name": "xgb_balanced",
+    "params": {
+      "max_depth": 8,
+      "learning_rate": 0.05,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 1.0,
+      "reg_alpha": 0.01,
+      "min_child_weight": 3
+    },
+    "val_mape": 0.19142319656134027,
+    "best_iteration": 878
+  },
+  {
+    "name": "xgb_deep",
+    "params": {
+      "max_depth": 10,
+      "learning_rate": 0.03,
+      "subsample": 0.8,
+      "colsample_bytree": 0.7,
+      "reg_lambda": 2.0,
+      "reg_alpha": 0.05,
+      "min_child_weight": 3
+    },
+    "val_mape": 0.1882172492522043,
+    "best_iteration": 1391
+  },
+  {
+    "name": "xgb_regularized",
+    "params": {
+      "max_depth": 8,
+      "learning_rate": 0.03,
+      "subsample": 0.7,
+      "colsample_bytree": 0.6,
+      "reg_lambda": 5.0,
+      "reg_alpha": 0.5,
+      "min_child_weight": 10
+    },
+    "val_mape": 0.1915636658836623,
+    "best_iteration": 1329
+  },
+  {
+    "name": "xgb_deep_reg",
+    "params": {
+      "max_depth": 10,
+      "learning_rate": 0.03,
+      "subsample": 0.8,
+      "colsample_bytree": 0.7,
+      "reg_lambda": 3.0,
+      "reg_alpha": 0.05,
+      "min_child_weight": 8
+    },
+    "val_mape": 0.19101313688541213,
+    "best_iteration": 696
+  },
+  {
+    "name": "xgb_mid_reg",
+    "params": {
+      "max_depth": 8,
+      "learning_rate": 0.04,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 2.0,
+      "reg_alpha": 0.05,
+      "min_child_weight": 10,
+      "gamma": 0.1
+    },
+    "val_mape": 0.19625276930845775,
+    "best_iteration": 729
+  }
+]

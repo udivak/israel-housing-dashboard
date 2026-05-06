@@ -1,0 +1,57 @@
+[
+  {
+    "name": "baseline",
+    "params": {
+      "d": 256,
+      "dropout": 0.1,
+      "weight_decay": 1e-05
+    },
+    "val_mape": 0.20792621680926654,
+    "epoch_at_best": 77,
+    "epochs_run": 97
+  },
+  {
+    "name": "dropout_high",
+    "params": {
+      "d": 256,
+      "dropout": 0.2,
+      "weight_decay": 1e-05
+    },
+    "val_mape": 0.20158258807101367,
+    "epoch_at_best": 150,
+    "epochs_run": 170
+  },
+  {
+    "name": "wd_high",
+    "params": {
+      "d": 256,
+      "dropout": 0.1,
+      "weight_decay": 0.0001
+    },
+    "val_mape": 0.20553325075214376,
+    "epoch_at_best": 108,
+    "epochs_run": 128
+  },
+  {
+    "name": "d_small",
+    "params": {
+      "d": 192,
+      "dropout": 0.1,
+      "weight_decay": 1e-05
+    },
+    "val_mape": 0.20485569350603924,
+    "epoch_at_best": 116,
+    "epochs_run": 136
+  },
+  {
+    "name": "d_large",
+    "params": {
+      "d": 384,
+      "dropout": 0.1,
+      "weight_decay": 1e-05
+    },
+    "val_mape": 0.20971078014360472,
+    "epoch_at_best": 65,
+    "epochs_run": 85
+  }
+]

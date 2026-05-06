@@ -1,0 +1,11 @@
+{
+  "submission": "udi/xgboost_v1",
+  "seed": 42,
+  "data_version": "v2",
+  "git_sha": "9ca441c",
+  "trained_at": "2026-04-26T12:53:26+00:00",
+  "n_train": 47550,
+  "n_val": 5943,
+  "n_test": 5945,
+  "n_features": 77
+}

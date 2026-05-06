@@ -1,0 +1,62 @@
+[
+  {
+    "feature_name": "city",
+    "attention_weight": 0.12836244702339172
+  },
+  {
+    "feature_name": "geo_cluster",
+    "attention_weight": 0.07913308590650558
+  },
+  {
+    "feature_name": "neighborhood",
+    "attention_weight": 0.06010802090167999
+  },
+  {
+    "feature_name": "deal_nature",
+    "attention_weight": 0.057247988879680634
+  },
+  {
+    "feature_name": "year",
+    "attention_weight": 0.043615542352199554
+  },
+  {
+    "feature_name": "floor",
+    "attention_weight": 0.040461841970682144
+  },
+  {
+    "feature_name": "floor_nan",
+    "attention_weight": 0.034043364226818085
+  },
+  {
+    "feature_name": "knn5_dist_weighted_price",
+    "attention_weight": 0.03145372495055199
+  },
+  {
+    "feature_name": "lat",
+    "attention_weight": 0.031197821721434593
+  },
+  {
+    "feature_name": "year_built_nan",
+    "attention_weight": 0.029772572219371796
+  },
+  {
+    "feature_name": "quarter",
+    "attention_weight": 0.027607174590229988
+  },
+  {
+    "feature_name": "knn5_mean_price_per_sqm",
+    "attention_weight": 0.026051832363009453
+  },
+  {
+    "feature_name": "log_area_sqm",
+    "attention_weight": 0.02525199204683304
+  },
+  {
+    "feature_name": "num_public_buildings_500m",
+    "attention_weight": 0.024662453681230545
+  },
+  {
+    "feature_name": "area_sqm",
+    "attention_weight": 0.024152975529432297
+  }
+]

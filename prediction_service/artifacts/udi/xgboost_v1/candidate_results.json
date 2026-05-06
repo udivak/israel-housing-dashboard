@@ -1,0 +1,72 @@
+[
+  {
+    "name": "xgb_fast",
+    "params": {
+      "max_depth": 6,
+      "learning_rate": 0.1,
+      "subsample": 0.9,
+      "colsample_bytree": 0.9,
+      "reg_lambda": 1.0,
+      "reg_alpha": 0.0,
+      "min_child_weight": 5
+    },
+    "val_mape": 0.2031859774732031,
+    "best_iteration": 1034
+  },
+  {
+    "name": "xgb_balanced",
+    "params": {
+      "max_depth": 8,
+      "learning_rate": 0.05,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "reg_lambda": 1.0,
+      "reg_alpha": 0.01,
+      "min_child_weight": 3
+    },
+    "val_mape": 0.20151285535830044,
+    "best_iteration": 778
+  },
+  {
+    "name": "xgb_deep",
+    "params": {
+      "max_depth": 10,
+      "learning_rate": 0.03,
+      "subsample": 0.8,
+      "colsample_bytree": 0.7,
+      "reg_lambda": 2.0,
+      "reg_alpha": 0.05,
+      "min_child_weight": 3
+    },
+    "val_mape": 0.19509290559584003,
+    "best_iteration": 889
+  },
+  {
+    "name": "xgb_regularized",
+    "params": {
+      "max_depth": 8,
+      "learning_rate": 0.03,
+      "subsample": 0.7,
+      "colsample_bytree": 0.6,
+      "reg_lambda": 5.0,
+      "reg_alpha": 0.5,
+      "min_child_weight": 10
+    },
+    "val_mape": 0.19996363991754199,
+    "best_iteration": 1383
+  },
+  {
+    "name": "xgb_slow_wide",
+    "params": {
+      "max_depth": 12,
+      "learning_rate": 0.02,
+      "subsample": 0.85,
+      "colsample_bytree": 0.85,
+      "reg_lambda": 1.0,
+      "reg_alpha": 0.0,
+      "min_child_weight": 2
+    },
+    "val_mape": 0.19369381932425497,
+    "best_iteration": 793
+  }
+]

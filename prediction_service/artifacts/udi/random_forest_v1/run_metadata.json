@@ -1,0 +1,10 @@
+{
+  "submission": "udi/random_forest_v1",
+  "seed": 42,
+  "git_sha": "b2f8e09",
+  "trained_at": "2026-04-26T10:58:48+00:00",
+  "n_train": 53671,
+  "n_val": 6708,
+  "n_test": 6710,
+  "n_features": 11
+}

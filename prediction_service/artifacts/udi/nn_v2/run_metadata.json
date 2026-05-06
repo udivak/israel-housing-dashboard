@@ -1,0 +1,11 @@
+{
+  "submission": "udi/nn_v2",
+  "seed": 42,
+  "data_version": "v2",
+  "git_sha": "0ae7c70",
+  "trained_at": "2026-04-27T12:23:32+00:00",
+  "n_train": 47550,
+  "n_val": 5943,
+  "n_test": 5945,
+  "n_features": 77
+}
