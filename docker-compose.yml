@@ -1,17 +1,29 @@
+# =============================================================================
+# Israel Housing Dashboard — unified compose
+#
+# Default profile: mongo, collector_service, prediction_service,
+#                  dashboard_service, dashboard_app
+# Profile `batch`: pre_processing  (run: docker compose --profile batch up pre_processing)
+# Profile `qa`   : streamlit_app   (run: docker compose --profile qa up streamlit_app)
+# =============================================================================
+
 services:
   mongo:
     image: mongo:7
+    command: ["mongod", "--quiet"]
     restart: unless-stopped
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
+    networks:
+      - housing
 
   collector_service:
     build:
@@ -33,6 +45,30 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
+    networks:
+      - housing
+
+  prediction_service:
+    build:
+      context: ./prediction_service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "8002"
+    environment:
+      CHAMPION_MODEL: ${CHAMPION_MODEL:-moses/lightgbm_v1}
+    volumes:
+      - model_artifacts:/app/artifacts
+      - processing_outputs:/app/data:ro
+    command: ["uvicorn", "serve:app", "--host", "0.0.0.0", "--port", "8002"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - housing
 
   dashboard_service:
     build:
@@ -45,43 +81,38 @@ services:
       - .env
     environment:
       MONGO_URI: mongodb://mongo:27017
+      PREDICTION_SERVICE_URL: http://prediction_service:8002
     depends_on:
       mongo:
         condition: service_healthy
+      prediction_service:
+        condition: service_started
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
+    networks:
+      - housing
 
   dashboard_app:
     build:
       context: ./dashboard_app
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     restart: unless-stopped
     ports:
       - "3000:3000"
     depends_on:
       dashboard_service:
         condition: service_healthy
-
-  streamlit_app:
-    build:
-      context: ./streamlit_app
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    ports:
-      - "8501:8501"
-    environment:
-      API_URL: http://dashboard_service:8000
-    depends_on:
-      dashboard_service:
-        condition: service_healthy
+    networks:
+      - housing
 
   pre_processing:
+    profiles: ["batch"]
     build:
       context: ./pre_processing
       dockerfile: Dockerfile
@@ -98,10 +129,34 @@ services:
     volumes:
       - ./data/osm:/data/osm:ro
       - ./data/parcel_all:/data/parcel_all:ro
-      - ./pre_processing/outputs:/outputs
+      - processing_outputs:/outputs
     depends_on:
       mongo:
         condition: service_healthy
+    networks:
+      - housing
+
+  streamlit_app:
+    profiles: ["qa"]
+    build:
+      context: ./streamlit_app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      API_URL: http://dashboard_service:8000
+    depends_on:
+      dashboard_service:
+        condition: service_healthy
+    networks:
+      - housing
 
 volumes:
   mongo_data:
+  model_artifacts:
+  processing_outputs:
+
+networks:
+  housing:
+    driver: bridge

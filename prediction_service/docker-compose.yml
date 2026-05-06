@@ -1,9 +1,0 @@
-services:
-  prediction_api:
-    build: .
-    ports:
-      - "8001:8001"
-    volumes:
-      - ./artifacts:/app/artifacts:ro
-      - ../temporal_features.xlsx:/app/temporal_features.xlsx:ro
-      - ../features_osm.csv:/app/features_osm.csv:ro
