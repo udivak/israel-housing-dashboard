@@ -1,0 +1,10 @@
+{
+  "submission": "moses/stacked_v2",
+  "seed": 42,
+  "git_sha": "958f223",
+  "trained_at": "2026-04-25T09:41:20+00:00",
+  "n_train": 45000,
+  "n_val": 5625,
+  "n_test": 5625,
+  "n_features": 89
+}
