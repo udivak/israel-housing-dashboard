@@ -11,9 +11,9 @@ export function SourceBreakdown() {
   const total = data.reduce((s, r) => s + r.count, 0);
 
   return (
-    <ChartCard title="פילוח לפי מקור" subtitle={`${fmtNum(total)} רשומות`} className="h-72">
+    <ChartCard title="Breakdown by Source" subtitle={`${fmtNum(total)} records`} className="h-72">
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center text-xs text-zinc-500">טוען…</div>
+        <div className="flex h-48 items-center justify-center text-xs text-zinc-500">Loading…</div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <ResponsiveContainer width="100%" height={200}>
@@ -59,9 +59,9 @@ export function PropertyTypeBreakdown({ city }: { city?: string }) {
   const top = data.slice(0, 8);
 
   return (
-    <ChartCard title="פילוח לפי סוג נכס" subtitle={city ?? "ארץ"} className="h-72">
+    <ChartCard title="Breakdown by Property Type" subtitle={city ?? "Country"} className="h-72">
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center text-xs text-zinc-500">טוען…</div>
+        <div className="flex h-48 items-center justify-center text-xs text-zinc-500">Loading…</div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <ResponsiveContainer width="100%" height={200}>

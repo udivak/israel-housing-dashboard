@@ -122,6 +122,7 @@ class FeaturesRepository:
             "area_sqm": 1,
             "city_name": 1,
             "neighborhood": 1,
+            "street": 1,
             "transaction_date": 1,
         }
         cursor = self._coll.find(match, projection).limit(limit)

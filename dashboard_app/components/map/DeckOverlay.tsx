@@ -45,6 +45,7 @@ function toGeoJSON(data: MapDataResponse | undefined) {
           area_sqm: p.area_sqm ?? null,
           city: p.city ?? "",
           neighborhood: p.neighborhood ?? "",
+          street: p.street ?? "",
           transaction_date: p.transaction_date ?? "",
         },
       });
@@ -115,6 +116,7 @@ export function DeckOverlay({ map, data, onPointClick }: DeckOverlayProps) {
           area_sqm: typeof props.area_sqm === "number" ? props.area_sqm : null,
           city: String(props.city || "") || null,
           neighborhood: String(props.neighborhood || "") || null,
+          street: String(props.street || "") || null,
           transaction_date: String(props.transaction_date || "") || null,
         });
       } else if (props.kind === "cluster") {

@@ -11,7 +11,7 @@ const MiniMap = dynamic(() => import("./MiniMap").then((m) => m.MiniMap), { ssr:
 
 function fmt(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return "—";
-  return n.toLocaleString("he-IL", { maximumFractionDigits: 0 });
+  return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
 
 function Stat({
@@ -38,12 +38,12 @@ export function PropertyClient({ id }: { id: string }) {
   const { data: property, isLoading, isError } = useProperty(id);
 
   if (isLoading) {
-    return <div className="text-sm text-zinc-400">טוען…</div>;
+    return <div className="text-sm text-zinc-400">Loading…</div>;
   }
   if (isError || !property) {
     return (
       <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300">
-        לא נמצא נכס עם המזהה {id}
+        Property not found: {id}
       </div>
     );
   }
@@ -51,17 +51,17 @@ export function PropertyClient({ id }: { id: string }) {
   const lng = property.geometry?.coordinates?.[0];
   const lat = property.geometry?.coordinates?.[1];
   const date = property.transaction_date
-    ? new Date(property.transaction_date).toLocaleDateString("he-IL")
+    ? new Date(property.transaction_date).toLocaleDateString("en-US")
     : "—";
 
   return (
-    <div dir="rtl" className="flex flex-col gap-4">
+    <div  className="flex flex-col gap-4">
       <Link
         href="/map"
         className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-white"
       >
         <ArrowRight className="h-3 w-3 rotate-180" />
-        חזרה למפה
+        Back to map
       </Link>
 
       <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-5 backdrop-blur">
@@ -71,7 +71,7 @@ export function PropertyClient({ id }: { id: string }) {
               <MapPin className="h-3.5 w-3.5" />
               {[property.city, property.neighborhood, property.street].filter(Boolean).join(" · ") || "—"}
             </div>
-            <h1 className="mt-1 text-2xl font-semibold text-white">{property.deal_nature ?? "נכס"}</h1>
+            <h1 className="mt-1 text-2xl font-semibold text-white">{property.deal_nature ?? "Property"}</h1>
           </div>
           <div className="text-left">
             <div className="text-3xl font-bold text-white">₪{fmt(property.price)}</div>
@@ -80,16 +80,16 @@ export function PropertyClient({ id }: { id: string }) {
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
-          <Stat icon={Ruler} label="שטח" value={`${fmt(property.area_sqm)} m²`} />
-          <Stat icon={Home} label="חדרים" value={fmt(property.rooms)} />
-          <Stat icon={Building} label="קומה" value={`${fmt(property.floor)}/${fmt(property.building_floors)}`} />
-          <Stat icon={Calendar} label="תאריך" value={date} />
+          <Stat icon={Ruler} label="Area" value={`${fmt(property.area_sqm)} m²`} />
+          <Stat icon={Home} label="Rooms" value={fmt(property.rooms)} />
+          <Stat icon={Building} label="Floor" value={`${fmt(property.floor)}/${fmt(property.building_floors)}`} />
+          <Stat icon={Calendar} label="Date" value={date} />
         </div>
 
         <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3">
-          <Stat icon={Calendar} label="שנת בנייה" value={fmt(property.year_built)} />
+          <Stat icon={Calendar} label="Year Built" value={fmt(property.year_built)} />
           {property.source_name && (
-            <Stat icon={Home} label="מקור" value={String(property.source_name)} />
+            <Stat icon={Home} label="Source" value={String(property.source_name)} />
           )}
         </div>
       </div>

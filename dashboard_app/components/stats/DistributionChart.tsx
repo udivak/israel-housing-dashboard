@@ -14,11 +14,11 @@ import { useDistribution } from "@/hooks/useStats";
 import { ChartCard, fmtNum } from "./ChartCard";
 
 const FIELDS = [
-  { value: "price" as const, label: "מחיר" },
+  { value: "price" as const, label: "Price" },
   { value: "price_per_sqm" as const, label: "₪/m²" },
-  { value: "rooms" as const, label: "חדרים" },
-  { value: "area_sqm" as const, label: "שטח" },
-  { value: "year_built" as const, label: "שנת בנייה" },
+  { value: "rooms" as const, label: "Rooms" },
+  { value: "area_sqm" as const, label: "Area" },
+  { value: "year_built" as const, label: "Year Built" },
 ];
 
 type Field = (typeof FIELDS)[number]["value"];
@@ -33,7 +33,7 @@ export function DistributionChart({ city }: { city?: string }) {
   }));
 
   return (
-    <ChartCard title="התפלגות" subtitle={city ?? "ארץ"} className="h-80">
+    <ChartCard title="Distribution" subtitle={city ?? "Country"} className="h-80">
       <div className="mb-2 flex flex-wrap gap-1">
         {FIELDS.map((f) => (
           <button
@@ -48,7 +48,7 @@ export function DistributionChart({ city }: { city?: string }) {
         ))}
       </div>
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center text-xs text-zinc-500">טוען…</div>
+        <div className="flex h-48 items-center justify-center text-xs text-zinc-500">Loading…</div>
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
@@ -57,7 +57,7 @@ export function DistributionChart({ city }: { city?: string }) {
             <YAxis stroke="#71717a" fontSize={11} />
             <Tooltip
               contentStyle={{ backgroundColor: "#18181b", border: "1px solid #3f3f46", color: "#fff" }}
-              formatter={(value: number) => [fmtNum(value), "מספר עסקאות"]}
+              formatter={(value: number) => [fmtNum(value), "Transactions"]}
             />
             <Bar dataKey="count" fill="#a78bfa" radius={[2, 2, 0, 0]} />
           </BarChart>

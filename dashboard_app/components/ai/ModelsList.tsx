@@ -8,14 +8,14 @@ export function ModelsList() {
   const { data: models = [], isLoading } = useModels();
 
   return (
-    <div dir="rtl" className="rounded-xl border border-white/10 bg-zinc-900/60 p-4 backdrop-blur">
+    <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-4 backdrop-blur">
       <div className="mb-3 flex items-center gap-2">
         <Brain className="h-4 w-4 text-cyan-400" />
-        <h3 className="text-sm font-semibold text-white">מודלים מאומנים</h3>
-        <span className="text-xs text-zinc-500">{models.length} זמינים</span>
+        <h3 className="text-sm font-semibold text-white">Trained Models</h3>
+        <span className="text-xs text-zinc-500">{models.length} available</span>
       </div>
       {isLoading ? (
-        <div className="text-xs text-zinc-500">טוען…</div>
+        <div className="text-xs text-zinc-500">Loading…</div>
       ) : (
         <div className="space-y-2">
           {models.map((m) => {

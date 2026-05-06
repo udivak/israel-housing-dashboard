@@ -19,16 +19,16 @@ interface FieldDef {
 }
 
 const FIELDS: FieldDef[] = [
-  { key: "area_sqm", label: "שטח (m²)", type: "number", defaultValue: "100" },
-  { key: "rooms", label: "חדרים", type: "number", step: "0.5", defaultValue: "4" },
-  { key: "floor", label: "קומה", type: "number", defaultValue: "3" },
-  { key: "building_floors", label: "קומות בבניין", type: "number", defaultValue: "8" },
-  { key: "year_built", label: "שנת בנייה", type: "number", defaultValue: "2010" },
-  { key: "property_age", label: "גיל נכס (שנים)", type: "number", defaultValue: "15" },
-  { key: "year", label: "שנת עסקה", type: "number", defaultValue: "2024" },
-  { key: "month", label: "חודש (1-12)", type: "number", defaultValue: "6" },
-  { key: "quarter", label: "רבעון (1-4)", type: "number", defaultValue: "2" },
-  { key: "log_area_sqm", label: "log(שטח)", type: "number", step: "0.001", defaultValue: "4.605", hint: "= ln(area_sqm)" },
+  { key: "area_sqm", label: "Area (m²)", type: "number", defaultValue: "100" },
+  { key: "rooms", label: "Rooms", type: "number", step: "0.5", defaultValue: "4" },
+  { key: "floor", label: "Floor", type: "number", defaultValue: "3" },
+  { key: "building_floors", label: "Building Floors", type: "number", defaultValue: "8" },
+  { key: "year_built", label: "Year Built", type: "number", defaultValue: "2010" },
+  { key: "property_age", label: "Property Age (years)", type: "number", defaultValue: "15" },
+  { key: "year", label: "Transaction Year", type: "number", defaultValue: "2024" },
+  { key: "month", label: "Month (1-12)", type: "number", defaultValue: "6" },
+  { key: "quarter", label: "Quarter (1-4)", type: "number", defaultValue: "2" },
+  { key: "log_area_sqm", label: "log(Area)", type: "number", step: "0.001", defaultValue: "4.605", hint: "= ln(area_sqm)" },
 ];
 
 interface PredictResponse {
@@ -52,7 +52,7 @@ interface CompareResponse {
 
 function fmtCurrency(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return "—";
-  return `₪${n.toLocaleString("he-IL", { maximumFractionDigits: 0 })}`;
+  return `₪${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
 export function PredictPlayground() {
@@ -83,7 +83,7 @@ export function PredictPlayground() {
       const features = await searchPlaces(address, { limit: 1 });
       const f = features[0];
       if (!f) {
-        setGeocodeError("לא נמצאה כתובת");
+        setGeocodeError("Address not found");
         setResolved(null);
       } else {
         const [lon, lat] = f.geometry.coordinates;
@@ -97,7 +97,7 @@ export function PredictPlayground() {
         });
       }
     } catch {
-      setGeocodeError("שגיאה ב-geocoding");
+      setGeocodeError("Geocoding error");
     } finally {
       setGeocoding(false);
     }
@@ -142,19 +142,19 @@ export function PredictPlayground() {
   };
 
   return (
-    <div dir="rtl" className="rounded-xl border border-white/10 bg-zinc-900/60 p-4 backdrop-blur">
+    <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-4 backdrop-blur">
       <div className="mb-3 flex items-center gap-2">
         <Brain className="h-4 w-4 text-cyan-400" />
-        <h3 className="text-sm font-semibold text-white">מגרש משחקים — ניבוי מחיר</h3>
+        <h3 className="text-sm font-semibold text-white">Playground — Price Prediction</h3>
       </div>
       <p className="mb-4 text-xs text-zinc-500">
-        מלא את הפיצ'רים ולחץ על הכפתור. שדות חסרים יוחלפו ב-null. הוסף כתובת לתוצאה מדויקת יותר.
+        Fill in the features and click the button. Missing fields are replaced with null. Add an address for better accuracy.
       </p>
 
       <div className="mb-4 rounded-md border border-white/10 bg-zinc-950/40 p-3">
         <div className="mb-2 flex items-center gap-2 text-xs font-medium text-zinc-300">
           <MapPin className="h-3.5 w-3.5 text-cyan-400" />
-          כתובת הנכס
+          Property Address
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
@@ -162,7 +162,7 @@ export function PredictPlayground() {
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleGeocode()}
-            placeholder="לדוגמה: רוטשילד 22 תל אביב"
+            placeholder="e.g., Rothschild 22, Tel Aviv"
             className="flex-1 rounded-md border border-white/10 bg-zinc-950/60 px-2.5 py-1.5 text-sm text-white placeholder:text-zinc-500 focus:border-cyan-500/50 focus:outline-none"
           />
           <button
@@ -171,7 +171,7 @@ export function PredictPlayground() {
             className="flex items-center justify-center gap-2 rounded-md border border-white/10 bg-zinc-950/60 px-3 py-1.5 text-sm text-white hover:bg-white/5 disabled:opacity-50"
           >
             {geocoding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
-            חפש
+            Search
           </button>
         </div>
         {resolved && (
@@ -212,7 +212,7 @@ export function PredictPlayground() {
             onChange={(e) => setCompareMode(e.target.checked)}
             className="h-3.5 w-3.5 accent-cyan-500"
           />
-          השוואת כל המודלים
+          Compare All Models
         </label>
         {!compareMode && (
           <select
@@ -220,7 +220,7 @@ export function PredictPlayground() {
             onChange={(e) => setSelectedModel(e.target.value)}
             className="rounded-md border border-white/10 bg-zinc-950/60 px-2.5 py-1.5 text-sm text-white"
           >
-            <option value="">Champion (ברירת מחדל)</option>
+            <option value="">Champion (default)</option>
             {models.map((m) => (
               <option key={m.id} value={m.id}>
                 {modelDisplayName(m.id)}
@@ -240,13 +240,13 @@ export function PredictPlayground() {
           ) : (
             <Brain className="h-4 w-4" />
           )}
-          {compareMode ? "הרץ הכל" : "הערך"}
+          {compareMode ? "Run All" : "Predict"}
         </button>
       </div>
 
       {!compareMode && single.data && (
         <div className="mt-4 rounded-md border border-cyan-500/30 bg-cyan-500/10 p-4">
-          <div className="text-xs text-zinc-400">תחזית · {modelDisplayName(single.data.model)}</div>
+          <div className="text-xs text-zinc-400">Prediction · {modelDisplayName(single.data.model)}</div>
           <div className="mt-1 text-3xl font-semibold text-white">
             {fmtCurrency(single.data.predicted_price)}
           </div>
@@ -257,7 +257,7 @@ export function PredictPlayground() {
         <div className="mt-4 space-y-2">
           {compare.data.consensus_price != null && (
             <div className="rounded-md border border-violet-500/30 bg-violet-500/10 p-4">
-              <div className="text-xs text-zinc-400">קונצנזוס (חציון)</div>
+              <div className="text-xs text-zinc-400">Consensus (median)</div>
               <div className="text-3xl font-semibold text-white">{fmtCurrency(compare.data.consensus_price)}</div>
               <div className="mt-1 text-xs text-zinc-500">
                 spread: {fmtCurrency(compare.data.spread_price)} · stddev: {fmtCurrency(compare.data.stddev_price)}
@@ -272,7 +272,7 @@ export function PredictPlayground() {
               >
                 <span className="text-zinc-300">{modelDisplayName(it.model)}</span>
                 {it.error ? (
-                  <span className="text-rose-400">שגיאה</span>
+                  <span className="text-rose-400">Error</span>
                 ) : (
                   <span className="font-medium text-white">{fmtCurrency(it.predicted_price)}</span>
                 )}
@@ -284,7 +284,7 @@ export function PredictPlayground() {
 
       {(single.isError || compare.isError) && (
         <div className="mt-4 rounded-md border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
-          שגיאה. בדוק שה-prediction service רץ ושיש מודל champion.
+          Error. Check that prediction_service is running and a champion model is set.
         </div>
       )}
     </div>

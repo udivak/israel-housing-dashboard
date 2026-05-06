@@ -6,7 +6,7 @@ import { Building2, MapPin, TrendingUp, Coins } from "lucide-react";
 
 function fmt(n: number | null | undefined, opts?: Intl.NumberFormatOptions): string {
   if (n == null || !Number.isFinite(n)) return "—";
-  return n.toLocaleString("he-IL", { maximumFractionDigits: 0, ...opts });
+  return n.toLocaleString("en-US", { maximumFractionDigits: 0, ...opts });
 }
 
 function Card({
@@ -45,10 +45,10 @@ export function KpiStrip() {
 
   return (
     <div className="flex w-full gap-3">
-      <Card icon={Building2} label="עסקאות" value={total} />
-      <Card icon={Coins} label="מחיר ממוצע" value={avgPrice} />
-      <Card icon={TrendingUp} label="מחיר ממוצע למ״ר" value={avgPpsm} />
-      <Card icon={MapPin} label="ערים בנתונים" value={cities} />
+      <Card icon={Building2} label="Transactions" value={total} />
+      <Card icon={Coins} label="Avg Price" value={avgPrice} />
+      <Card icon={TrendingUp} label="Avg ₪/m²" value={avgPpsm} />
+      <Card icon={MapPin} label="Cities in Data" value={cities} />
     </div>
   );
 }

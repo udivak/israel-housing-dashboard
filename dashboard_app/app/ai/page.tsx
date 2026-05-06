@@ -3,11 +3,11 @@ import { PredictPlayground } from "@/components/ai/PredictPlayground";
 
 export default function AIPage() {
   return (
-    <div dir="rtl" className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold text-white">AI · ניבוי מחירים</h1>
+        <h1 className="text-2xl font-semibold text-white">AI · Price Prediction</h1>
         <p className="text-sm text-zinc-400">
-          מגרש משחקים לניסוי מודלים, השוואה בין מאמנים, וצפייה בביצועי המודלים.
+          Playground to experiment with models, compare predictions, and inspect model performance.
         </p>
       </div>
       <PredictPlayground />

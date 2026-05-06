@@ -19,8 +19,8 @@ export function TopCitiesChart() {
 
   return (
     <ChartCard
-      title="הערים/שכונות היקרות ביותר"
-      subtitle={`לפי ₪/m² ממוצע · top 15 ${level === "city" ? "ערים" : "שכונות"}`}
+      title="Most Expensive Cities/Neighborhoods"
+      subtitle={`By avg ₪/m² · top 15 ${level === "city" ? "cities" : "neighborhoods"}`}
       className="h-96"
     >
       <div className="mb-2 flex gap-1">
@@ -30,7 +30,7 @@ export function TopCitiesChart() {
             level === "city" ? "bg-cyan-500/20 text-cyan-300" : "text-zinc-400 hover:bg-white/5"
           }`}
         >
-          ערים
+          Cities
         </button>
         <button
           onClick={() => setLevel("neighborhood")}
@@ -38,11 +38,11 @@ export function TopCitiesChart() {
             level === "neighborhood" ? "bg-cyan-500/20 text-cyan-300" : "text-zinc-400 hover:bg-white/5"
           }`}
         >
-          שכונות
+          Neighborhoods
         </button>
       </div>
       {isLoading ? (
-        <div className="flex h-64 items-center justify-center text-xs text-zinc-500">טוען…</div>
+        <div className="flex h-64 items-center justify-center text-xs text-zinc-500">Loading…</div>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data} layout="vertical" margin={{ top: 5, right: 10, left: 80, bottom: 5 }}>
@@ -51,7 +51,7 @@ export function TopCitiesChart() {
             <YAxis dataKey="region" type="category" stroke="#71717a" fontSize={11} width={75} />
             <Tooltip
               contentStyle={{ backgroundColor: "#18181b", border: "1px solid #3f3f46", color: "#fff" }}
-              formatter={(value: number) => [fmtNum(value) + " ₪/m²", "ממוצע"]}
+              formatter={(value: number) => [fmtNum(value) + " ₪/m²", "avg"]}
             />
             <Bar dataKey="avg_price_per_sqm" fill="#06b6d4" radius={[0, 4, 4, 0]} />
           </BarChart>

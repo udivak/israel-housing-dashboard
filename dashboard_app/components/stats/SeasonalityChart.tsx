@@ -12,7 +12,7 @@ import {
 import { useSeasonality } from "@/hooks/useStats";
 import { ChartCard, fmtNum } from "./ChartCard";
 
-const MONTHS = ["ינו", "פבר", "מרץ", "אפר", "מאי", "יוני", "יולי", "אוג", "ספט", "אוק", "נוב", "דצמ"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export function SeasonalityChart({ city }: { city?: string }) {
   const { data = [], isLoading } = useSeasonality(city);
@@ -25,12 +25,12 @@ export function SeasonalityChart({ city }: { city?: string }) {
 
   return (
     <ChartCard
-      title="עונתיות"
-      subtitle="עסקאות לפי חודש בשנה"
+      title="Seasonality"
+      subtitle="Transactions by month"
       className="h-72"
     >
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center text-xs text-zinc-500">טוען…</div>
+        <div className="flex h-48 items-center justify-center text-xs text-zinc-500">Loading…</div>
       ) : (
         <ResponsiveContainer width="100%" height={210}>
           <BarChart data={chart} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
@@ -39,7 +39,7 @@ export function SeasonalityChart({ city }: { city?: string }) {
             <YAxis stroke="#71717a" fontSize={11} tickFormatter={(v) => fmtNum(v)} />
             <Tooltip
               contentStyle={{ backgroundColor: "#18181b", border: "1px solid #3f3f46", color: "#fff" }}
-              formatter={(value: number) => [fmtNum(value), "עסקאות"]}
+              formatter={(value: number) => [fmtNum(value), "Transactions"]}
             />
             <Bar dataKey="count" fill="#22d3ee" radius={[4, 4, 0, 0]} />
           </BarChart>

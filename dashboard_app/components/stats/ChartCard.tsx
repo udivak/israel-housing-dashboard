@@ -23,10 +23,10 @@ export function ChartCard({ title, subtitle, children, className = "" }: ChartCa
 
 export function fmtNum(n: number | null | undefined, opts?: Intl.NumberFormatOptions): string {
   if (n == null || !Number.isFinite(n)) return "—";
-  return n.toLocaleString("he-IL", { maximumFractionDigits: 0, ...opts });
+  return n.toLocaleString("en-US", { maximumFractionDigits: 0, ...opts });
 }
 
 export function fmtCurrency(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return "—";
-  return `₪${n.toLocaleString("he-IL", { maximumFractionDigits: 0 })}`;
+  return `₪${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }

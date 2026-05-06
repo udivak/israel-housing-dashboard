@@ -4,12 +4,12 @@ import { useFiltersStore } from "@/lib/store/filters";
 import { Filter, X } from "lucide-react";
 
 const PROPERTY_TYPES = [
-  "דירה",
-  "דירה בבית קומות",
-  "קוטג'",
-  "פנטהאוז",
-  "דופלקס",
-  "דירת גן",
+  { value: "דירה", label: "Apartment" },
+  { value: "דירה בבית קומות", label: "Apartment in tower" },
+  { value: "קוטג'", label: "Cottage" },
+  { value: "פנטהאוז", label: "Penthouse" },
+  { value: "דופלקס", label: "Duplex" },
+  { value: "דירת גן", label: "Garden apartment" },
 ];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -30,44 +30,41 @@ export function FilterSidebar() {
   const reset = useFiltersStore((s) => s.resetFilters);
 
   return (
-    <aside
-      dir="rtl"
-      className="flex h-full w-72 shrink-0 flex-col gap-4 overflow-y-auto rounded-xl border border-white/10 bg-zinc-900/60 p-4 backdrop-blur"
-    >
+    <aside className="flex h-full w-72 shrink-0 flex-col gap-4 overflow-y-auto rounded-xl border border-white/10 bg-zinc-900/60 p-4 backdrop-blur">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-semibold text-white">
           <Filter className="h-4 w-4" />
-          סינון
+          Filters
         </div>
         <button
           onClick={reset}
           className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-zinc-400 hover:bg-white/5 hover:text-white"
         >
           <X className="h-3 w-3" />
-          איפוס
+          Reset
         </button>
       </div>
 
-      <Field label="עיר">
+      <Field label="City">
         <input
           className={inputCls}
           value={filters.city ?? ""}
-          placeholder="כל הערים"
+          placeholder="All cities"
           onChange={(e) => setFilters({ city: e.target.value || undefined })}
         />
       </Field>
 
-      <Field label="שכונה">
+      <Field label="Neighborhood">
         <input
           className={inputCls}
           value={filters.neighborhood ?? ""}
-          placeholder="כל השכונות"
+          placeholder="All neighborhoods"
           onChange={(e) => setFilters({ neighborhood: e.target.value || undefined })}
         />
       </Field>
 
       <div className="grid grid-cols-2 gap-2">
-        <Field label="מחיר מינ׳ (₪)">
+        <Field label="Min Price (₪)">
           <input
             type="number"
             className={inputCls}
@@ -77,7 +74,7 @@ export function FilterSidebar() {
             }
           />
         </Field>
-        <Field label="מחיר מקס׳ (₪)">
+        <Field label="Max Price (₪)">
           <input
             type="number"
             className={inputCls}
@@ -90,7 +87,7 @@ export function FilterSidebar() {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <Field label="חדרים מינ׳">
+        <Field label="Min Rooms">
           <input
             type="number"
             step="0.5"
@@ -101,7 +98,7 @@ export function FilterSidebar() {
             }
           />
         </Field>
-        <Field label="חדרים מקס׳">
+        <Field label="Max Rooms">
           <input
             type="number"
             step="0.5"
@@ -115,7 +112,7 @@ export function FilterSidebar() {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <Field label="שטח מינ׳ (m²)">
+        <Field label="Min Area (m²)">
           <input
             type="number"
             className={inputCls}
@@ -125,7 +122,7 @@ export function FilterSidebar() {
             }
           />
         </Field>
-        <Field label="שטח מקס׳ (m²)">
+        <Field label="Max Area (m²)">
           <input
             type="number"
             className={inputCls}
@@ -138,7 +135,7 @@ export function FilterSidebar() {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <Field label="מתאריך">
+        <Field label="From Date">
           <input
             type="date"
             className={inputCls}
@@ -146,7 +143,7 @@ export function FilterSidebar() {
             onChange={(e) => setFilters({ from_date: e.target.value || undefined })}
           />
         </Field>
-        <Field label="עד תאריך">
+        <Field label="To Date">
           <input
             type="date"
             className={inputCls}
@@ -156,28 +153,28 @@ export function FilterSidebar() {
         </Field>
       </div>
 
-      <Field label="סוג נכס">
+      <Field label="Property Type">
         <select
           className={inputCls}
           value={filters.property_type ?? ""}
           onChange={(e) => setFilters({ property_type: e.target.value || undefined })}
         >
-          <option value="">הכל</option>
+          <option value="">All</option>
           {PROPERTY_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
+            <option key={t.value} value={t.value}>
+              {t.label}
             </option>
           ))}
         </select>
       </Field>
 
-      <Field label="מקור">
+      <Field label="Source">
         <select
           className={inputCls}
           value={filters.source ?? ""}
           onChange={(e) => setFilters({ source: e.target.value || undefined })}
         >
-          <option value="">הכל</option>
+          <option value="">All</option>
           <option value="nadlan_gov">nadlan_gov</option>
           <option value="odata_il_nadlan">odata_il_nadlan</option>
           <option value="tax_authority_nadlan">tax_authority_nadlan</option>

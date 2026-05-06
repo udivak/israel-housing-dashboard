@@ -58,6 +58,7 @@ export interface PointFeature {
   area_sqm?: number | null;
   city?: string | null;
   neighborhood?: string | null;
+  street?: string | null;
   transaction_date?: string | null;
 }
 

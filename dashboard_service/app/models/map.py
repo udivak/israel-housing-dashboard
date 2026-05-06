@@ -50,6 +50,7 @@ class PointFeature(BaseModel):
     area_sqm: float | None = None
     city: str | None = None
     neighborhood: str | None = None
+    street: str | None = None
     transaction_date: datetime | None = None
 
 

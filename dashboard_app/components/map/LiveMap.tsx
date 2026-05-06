@@ -119,12 +119,12 @@ export function LiveMap() {
       <PropertyPanel point={selected} onClose={() => setSelected(null)} />
       {error && (
         <div className="absolute inset-x-3 top-3 z-20 rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-200">
-          שגיאה בטעינת מפה: {error}
+          Map error: {error}
         </div>
       )}
       {data?.type === "points" && data.truncated && (
         <div className="absolute bottom-3 right-3 z-10 rounded-md bg-amber-500/90 px-2 py-1 text-xs text-zinc-900">
-          מוצגות עד 2,000 תוצאות — הגדל זום או הוסף סינון
+          Showing up to 2,000 results — zoom in or add filters
         </div>
       )}
     </div>

@@ -67,7 +67,7 @@ function buildFeatureDict(p: PropertyDoc): Record<string, unknown> {
 
 function fmtCurrency(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return "—";
-  return `₪${n.toLocaleString("he-IL", { maximumFractionDigits: 0 })}`;
+  return `₪${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
 export function PredictionPanel({ property }: { property: PropertyDoc }) {
@@ -99,10 +99,10 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
   };
 
   return (
-    <div dir="rtl" className="rounded-xl border border-white/10 bg-zinc-900/60 p-4 backdrop-blur">
+    <div  className="rounded-xl border border-white/10 bg-zinc-900/60 p-4 backdrop-blur">
       <div className="mb-3 flex items-center gap-2">
         <Brain className="h-4 w-4 text-cyan-400" />
-        <h3 className="text-sm font-semibold text-white">ניבוי מחיר</h3>
+        <h3 className="text-sm font-semibold text-white">Price Prediction</h3>
       </div>
 
       <div className="mb-3 flex flex-col gap-2">
@@ -114,7 +114,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
               onChange={(e) => setCompareMode(e.target.checked)}
               className="h-3.5 w-3.5 accent-cyan-500"
             />
-            השוואת מודלים
+            Compare Models
           </label>
         </div>
 
@@ -124,7 +124,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
             onChange={(e) => setSelectedModel(e.target.value)}
             className="rounded-md border border-white/10 bg-zinc-950/60 px-2.5 py-1.5 text-sm text-white"
           >
-            <option value="">Champion (ברירת מחדל)</option>
+            <option value="">Champion (default)</option>
             {models.map((m) => (
               <option key={m.id} value={m.id}>
                 {modelDisplayName(m.id)}
@@ -145,17 +145,17 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
           ) : (
             <Brain className="h-4 w-4" />
           )}
-          {compareMode ? "הרץ את כל המודלים" : "הערך"}
+          {compareMode ? "Run All Models" : "Predict"}
         </button>
       </div>
 
       {!compareMode && single.data && (
         <div className="rounded-md border border-cyan-500/30 bg-cyan-500/10 p-3">
-          <div className="text-xs text-zinc-400">תחזית · {modelDisplayName(single.data.model)}</div>
+          <div className="text-xs text-zinc-400">Prediction · {modelDisplayName(single.data.model)}</div>
           <div className="mt-1 text-2xl font-semibold text-white">{fmtCurrency(single.data.predicted_price)}</div>
           {property.price != null && (
             <div className="mt-1 text-xs text-zinc-400">
-              לעומת מחיר עסקה: {fmtCurrency(property.price)} (
+              vs deal price: {fmtCurrency(property.price)} (
               <span className={single.data.predicted_price > property.price ? "text-emerald-400" : "text-rose-400"}>
                 {(((single.data.predicted_price - property.price) / property.price) * 100).toFixed(1)}%
               </span>
@@ -169,7 +169,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
         <div className="space-y-2">
           {compare.data.consensus_price != null && (
             <div className="rounded-md border border-violet-500/30 bg-violet-500/10 p-3">
-              <div className="text-xs text-zinc-400">קונצנזוס (חציון)</div>
+              <div className="text-xs text-zinc-400">Consensus (median)</div>
               <div className="text-2xl font-semibold text-white">{fmtCurrency(compare.data.consensus_price)}</div>
               <div className="text-xs text-zinc-500">
                 spread: {fmtCurrency(compare.data.spread_price)} · stddev: {fmtCurrency(compare.data.stddev_price)}
@@ -184,7 +184,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
               >
                 <span className="text-zinc-300">{modelDisplayName(it.model)}</span>
                 {it.error ? (
-                  <span className="text-rose-400">שגיאה</span>
+                  <span className="text-rose-400">Error</span>
                 ) : (
                   <span className="font-medium text-white">{fmtCurrency(it.predicted_price)}</span>
                 )}
@@ -196,7 +196,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
 
       {(single.isError || compare.isError) && (
         <div className="mt-2 rounded-md border border-rose-500/30 bg-rose-500/10 p-2 text-xs text-rose-300">
-          שגיאה בניבוי. ודא שה-prediction service רץ ושיש champion model.
+          Prediction error. Verify prediction_service is running and a champion model is set.
         </div>
       )}
     </div>

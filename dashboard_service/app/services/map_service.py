@@ -113,6 +113,7 @@ class MapService:
                     area_sqm=d.get("area_sqm"),
                     city=d.get("city_name") or d.get("city"),
                     neighborhood=d.get("neighborhood"),
+                    street=d.get("street"),
                     transaction_date=d.get("transaction_date"),
                 )
             )

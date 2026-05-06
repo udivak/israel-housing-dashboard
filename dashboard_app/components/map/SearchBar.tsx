@@ -13,7 +13,7 @@ interface SearchBarProps {
 
 export function SearchBar({
   onSelect,
-  placeholder = "חיפוש רחוב, עיר, כתובת...",
+  placeholder = "Search street, city, address...",
   className = "",
 }: SearchBarProps) {
   const [query, setQuery] = useState("");

@@ -9,21 +9,21 @@ export function YoyTable() {
 
   return (
     <ChartCard
-      title="ערים מתחממות"
-      subtitle="שינוי מחיר ₪/m² שנה לאחור · top 20"
+      title="Heating Cities"
+      subtitle="YoY ₪/m² change · top 20"
       className="h-96"
     >
       {isLoading ? (
-        <div className="flex h-64 items-center justify-center text-xs text-zinc-500">טוען…</div>
+        <div className="flex h-64 items-center justify-center text-xs text-zinc-500">Loading…</div>
       ) : (
         <div className="overflow-y-auto" style={{ maxHeight: 320 }}>
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-zinc-900/95 backdrop-blur">
               <tr className="border-b border-white/10 text-zinc-400">
-                <th className="py-2 text-right font-normal">עיר</th>
+                <th className="py-2 text-right font-normal">City</th>
                 <th className="py-2 text-right font-normal">YoY</th>
-                <th className="py-2 text-right font-normal">₪/m² נוכחי</th>
-                <th className="py-2 text-right font-normal">עסקאות</th>
+                <th className="py-2 text-right font-normal">Current ₪/m²</th>
+                <th className="py-2 text-right font-normal">Deals</th>
               </tr>
             </thead>
             <tbody>
