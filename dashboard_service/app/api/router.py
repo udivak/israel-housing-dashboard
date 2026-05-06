@@ -2,8 +2,9 @@
 
 from fastapi import APIRouter
 
-from app.api.routes import layers, map_data
+from app.api.routes import layers, map_data, predict
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(layers.router)
 api_router.include_router(map_data.router)
+api_router.include_router(predict.router)

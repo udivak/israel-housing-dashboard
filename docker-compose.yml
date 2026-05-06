@@ -57,8 +57,9 @@ services:
       - "8002"
     environment:
       CHAMPION_MODEL: ${CHAMPION_MODEL:-moses/lightgbm_v1}
+      ARTIFACTS_DIR: /app/artifacts
     volumes:
-      - model_artifacts:/app/artifacts
+      - ./prediction_service/artifacts:/app/artifacts:ro
       - processing_outputs:/app/data:ro
     command: ["uvicorn", "serve:app", "--host", "0.0.0.0", "--port", "8002"]
     healthcheck:
@@ -154,7 +155,6 @@ services:
 
 volumes:
   mongo_data:
-  model_artifacts:
   processing_outputs:
 
 networks:
