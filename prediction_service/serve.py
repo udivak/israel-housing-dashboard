@@ -1,115 +1,228 @@
 """
-FastAPI — מגיש את ה-champion model.
+FastAPI — multi-model prediction service.
+
+הטעינה lazy: מודל נטען בקריאה הראשונה ונשמר ב-LRU cache.
+המשתמש בוחר ב-UI איזה מודל להריץ; אם לא בחר, נופלים ל-CHAMPION_MODEL.
 
 הרצה לוקלית:
     uvicorn serve:app --reload --port 8002
-
-ב-Docker רץ אוטומטית עם החלפת champion דרך CHAMPION_MODEL env var.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import math
 import os
+import statistics
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
 ROOT = Path(__file__).resolve().parent
-CHAMPION = os.getenv("CHAMPION_MODEL", "moses/lightgbm_v1")
 ARTIFACTS_DIR = Path(os.getenv("ARTIFACTS_DIR", str(ROOT / "artifacts")))
+CHAMPION = os.getenv("CHAMPION_MODEL", "moses/lightgbm_v1")
+MODEL_CACHE_SIZE = int(os.getenv("MODEL_CACHE_SIZE", "8"))
 
 logger = logging.getLogger("prediction_service")
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 
 
 class PredictRequest(BaseModel):
-    features: dict[str, Any] = Field(
-        ...,
-        description="Feature dict; keys must match model's expected feature names.",
-    )
+    features: dict[str, Any] = Field(..., description="Feature dict matching the model.")
 
 
 class PredictResponse(BaseModel):
     predicted_log_price: float
     predicted_price: float
-    champion: str
+    model: str
 
 
-app = FastAPI(title="Housing Price Prediction Service", version="1.0.0")
-_model: Any | None = None
-_feature_names: list[str] | None = None
+class CompareRequest(BaseModel):
+    features: dict[str, Any]
+    models: list[str] | None = Field(
+        default=None,
+        description="Models to compare. If omitted/empty, runs all available models.",
+    )
 
 
-@app.on_event("startup")
-def _load_model() -> None:
-    global _model, _feature_names
-    path = ARTIFACTS_DIR / CHAMPION / "model.joblib"
+class CompareItem(BaseModel):
+    model: str
+    predicted_log_price: float | None = None
+    predicted_price: float | None = None
+    error: str | None = None
+
+
+class CompareResponse(BaseModel):
+    items: list[CompareItem]
+    consensus_price: float | None = None
+    spread_price: float | None = None  # max - min across successful models
+    stddev_price: float | None = None
+
+
+class ModelInfo(BaseModel):
+    id: str
+    owner: str
+    name: str
+    metrics: dict[str, Any] | None = None
+    metadata: dict[str, Any] | None = None
+    n_features: int | None = None
+
+
+app = FastAPI(title="Housing Price Prediction Service", version="2.0.0")
+
+
+# ---------------------------------------------------------------------------
+# Model loading & caching
+# ---------------------------------------------------------------------------
+
+
+def _model_dir(model_id: str) -> Path:
+    return ARTIFACTS_DIR / model_id
+
+
+def _read_json(path: Path) -> dict[str, Any] | None:
     if not path.exists():
-        logger.warning("Model not found at %s — service will return 503 on /predict", path)
-        return
-    _model = joblib.load(path)
-    # Try common attributes for feature lists across sklearn-style estimators.
+        return None
+    try:
+        return json.loads(path.read_text())
+    except Exception:
+        return None
+
+
+@lru_cache(maxsize=MODEL_CACHE_SIZE)
+def _load_model(model_id: str) -> tuple[Any, list[str] | None]:
+    path = _model_dir(model_id) / "model.joblib"
+    if not path.exists():
+        raise FileNotFoundError(f"Model artifact not found: {path}")
+    model = joblib.load(path)
+    feature_names: list[str] | None = None
     for attr in ("feature_name_", "feature_names_in_", "feature_names_"):
-        names = getattr(_model, attr, None)
+        names = getattr(model, attr, None)
         if names is not None:
-            _feature_names = list(names)
+            feature_names = list(names)
             break
-    logger.info("Loaded champion=%s features=%s", CHAMPION, len(_feature_names or []))
+    logger.info("Loaded model=%s n_features=%s", model_id, len(feature_names or []))
+    return model, feature_names
+
+
+def _list_available_models() -> list[ModelInfo]:
+    if not ARTIFACTS_DIR.exists():
+        return []
+    out: list[ModelInfo] = []
+    for owner_dir in sorted(p for p in ARTIFACTS_DIR.iterdir() if p.is_dir()):
+        for model_dir in sorted(p for p in owner_dir.iterdir() if p.is_dir()):
+            artifact = model_dir / "model.joblib"
+            if not artifact.exists():
+                continue
+            mid = f"{owner_dir.name}/{model_dir.name}"
+            metadata = _read_json(model_dir / "run_metadata.json")
+            metrics = _read_json(model_dir / "metrics.json")
+            out.append(
+                ModelInfo(
+                    id=mid,
+                    owner=owner_dir.name,
+                    name=model_dir.name,
+                    metrics=metrics,
+                    metadata=metadata,
+                    n_features=(metadata or {}).get("n_features"),
+                )
+            )
+    return out
+
+
+def _predict_one(model_id: str, features: dict[str, Any]) -> float:
+    model, feature_names = _load_model(model_id)
+    df = pd.DataFrame([features])
+    if feature_names is not None:
+        for col in feature_names:
+            if col not in df.columns:
+                df[col] = None
+        df = df[feature_names]
+    y = model.predict(df)
+    return float(y[0])
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
 
 
 @app.get("/health")
 def health() -> dict[str, Any]:
+    available = _list_available_models()
     return {
         "status": "ok",
-        "model_loaded": _model is not None,
         "champion": CHAMPION,
-        "n_features": len(_feature_names) if _feature_names else None,
+        "available_models": [m.id for m in available],
+        "cache_size": MODEL_CACHE_SIZE,
     }
 
 
-@app.get("/champion")
-def champion_info() -> dict[str, Any]:
-    if _model is None:
-        raise HTTPException(503, "Model not loaded")
-    metadata_path = ARTIFACTS_DIR / CHAMPION / "run_metadata.json"
-    metrics_path = ARTIFACTS_DIR / CHAMPION / "metrics.json"
-    out: dict[str, Any] = {"champion": CHAMPION, "feature_names": _feature_names}
-    if metadata_path.exists():
-        import json
-        out["metadata"] = json.loads(metadata_path.read_text())
-    if metrics_path.exists():
-        import json
-        out["metrics"] = json.loads(metrics_path.read_text())
-    return out
+@app.get("/models", response_model=list[ModelInfo])
+def list_models() -> list[ModelInfo]:
+    return _list_available_models()
+
+
+@app.get("/models/{owner}/{name}", response_model=ModelInfo)
+def get_model_info(owner: str, name: str) -> ModelInfo:
+    mid = f"{owner}/{name}"
+    for m in _list_available_models():
+        if m.id == mid:
+            return m
+    raise HTTPException(404, f"Model {mid} not found")
 
 
 @app.post("/predict", response_model=PredictResponse)
-def predict(req: PredictRequest) -> PredictResponse:
-    if _model is None:
-        raise HTTPException(503, "Model not loaded")
-
-    df = pd.DataFrame([req.features])
-    if _feature_names is not None:
-        missing = [c for c in _feature_names if c not in df.columns]
-        for col in missing:
-            df[col] = None
-        df = df[_feature_names]
-
+def predict(
+    req: PredictRequest,
+    model: str = Query(default=CHAMPION, description="owner/name; defaults to CHAMPION_MODEL"),
+) -> PredictResponse:
     try:
-        y_pred = _model.predict(df)
+        log_price = _predict_one(model, req.features)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except Exception as exc:
         logger.exception("Prediction failed")
         raise HTTPException(400, f"Prediction failed: {exc}") from exc
-
-    log_price = float(y_pred[0])
     return PredictResponse(
         predicted_log_price=log_price,
         predicted_price=math.exp(log_price),
-        champion=CHAMPION,
+        model=model,
+    )
+
+
+@app.post("/predict/compare", response_model=CompareResponse)
+def predict_compare(req: CompareRequest) -> CompareResponse:
+    models = req.models or [m.id for m in _list_available_models()]
+    if not models:
+        raise HTTPException(404, "No models available")
+
+    items: list[CompareItem] = []
+    successful_prices: list[float] = []
+    for mid in models:
+        try:
+            log_price = _predict_one(mid, req.features)
+            price = math.exp(log_price)
+            items.append(CompareItem(model=mid, predicted_log_price=log_price, predicted_price=price))
+            successful_prices.append(price)
+        except Exception as exc:
+            items.append(CompareItem(model=mid, error=str(exc)))
+
+    consensus = stddev = spread = None
+    if successful_prices:
+        consensus = float(statistics.median(successful_prices))
+        spread = max(successful_prices) - min(successful_prices)
+        stddev = float(statistics.pstdev(successful_prices)) if len(successful_prices) > 1 else 0.0
+
+    return CompareResponse(
+        items=items,
+        consensus_price=consensus,
+        spread_price=spread,
+        stddev_price=stddev,
     )
