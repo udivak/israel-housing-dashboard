@@ -1,14 +1,76 @@
 """Map feature data endpoints with BBox queries."""
 
+from datetime import datetime
+
 from fastapi import APIRouter, Query
 
 from app.core.exceptions import InvalidBBoxError, LayerNotFoundError
 from app.models.geojson import FeatureCollection
+from app.models.map import ClusterResponse, MapFilters, PointsResponse
 from app.models.requests import BBoxQueryParams
 from app.services.geo_service import GeoService
 from app.services.layer_service import LayerService
+from app.services.map_service import MapService
 
 router = APIRouter(prefix="/map", tags=["Map Data"])
+
+
+@router.get(
+    "/data",
+    summary="Zoom-aware map data (clusters or points)",
+    description="""
+    Returns either H3 cluster aggregates (low/mid zoom) or individual property points
+    (zoom >= 14), inside the given bounding box. The response shape is determined by
+    the `type` field: either `clusters` or `points`.
+
+    Filters are optional and combine with AND semantics.
+    """,
+    response_model=ClusterResponse | PointsResponse,
+)
+async def get_map_data(
+    min_lat: float = Query(..., ge=-90, le=90),
+    max_lat: float = Query(..., ge=-90, le=90),
+    min_lng: float = Query(..., ge=-180, le=180),
+    max_lng: float = Query(..., ge=-180, le=180),
+    zoom: int = Query(..., ge=0, le=22),
+    city: str | None = Query(None),
+    neighborhood: str | None = Query(None),
+    min_price: float | None = Query(None, ge=0),
+    max_price: float | None = Query(None, ge=0),
+    min_rooms: float | None = Query(None, ge=0),
+    max_rooms: float | None = Query(None, ge=0),
+    min_area: float | None = Query(None, ge=0),
+    max_area: float | None = Query(None, ge=0),
+    from_date: datetime | None = Query(None),
+    to_date: datetime | None = Query(None),
+    property_type: str | None = Query(None),
+    source: str | None = Query(None),
+):
+    if min_lat >= max_lat or min_lng >= max_lng:
+        raise InvalidBBoxError("min must be strictly less than max for both lat and lng")
+
+    filters = MapFilters(
+        city=city,
+        neighborhood=neighborhood,
+        min_price=min_price,
+        max_price=max_price,
+        min_rooms=min_rooms,
+        max_rooms=max_rooms,
+        min_area=min_area,
+        max_area=max_area,
+        from_date=from_date,
+        to_date=to_date,
+        property_type=property_type,
+        source=source,
+    )
+    return await MapService().get_map_data(
+        min_lat=min_lat,
+        max_lat=max_lat,
+        min_lng=min_lng,
+        max_lng=max_lng,
+        zoom=zoom,
+        filters=filters,
+    )
 
 
 @router.get(
