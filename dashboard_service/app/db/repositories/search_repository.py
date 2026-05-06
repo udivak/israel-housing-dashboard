@@ -20,7 +20,7 @@ class SearchRepository:
             return []
         regex = {"$regex": f"^{q}", "$options": "i"}
         suggestions: list[dict[str, Any]] = []
-        for field in ("city", "neighborhood", "street"):
+        for field in ("city_name", "neighborhood", "street"):
             cursor = self._coll.aggregate(
                 [
                     {"$match": {field: regex}},
@@ -31,7 +31,8 @@ class SearchRepository:
             )
             async for row in cursor:
                 if row["_id"]:
-                    suggestions.append({"type": field, "value": row["_id"], "count": row["count"]})
+                    type_label = "city" if field == "city_name" else field
+                    suggestions.append({"type": type_label, "value": row["_id"], "count": row["count"]})
         suggestions.sort(key=lambda r: r["count"], reverse=True)
         return suggestions[:limit]
 

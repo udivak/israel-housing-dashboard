@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect } from "react";
 import maplibregl from "maplibre-gl";
-import { MapboxOverlay } from "@deck.gl/mapbox";
-import { ScatterplotLayer } from "@deck.gl/layers";
-import type { ClusterCell, MapDataResponse, PointFeature } from "@/lib/api/types";
+import type { MapDataResponse, PointFeature } from "@/lib/api/types";
 
 interface DeckOverlayProps {
   map: maplibregl.Map | null;
@@ -12,109 +10,146 @@ interface DeckOverlayProps {
   onPointClick?: (p: PointFeature) => void;
 }
 
-const RAMP: [number, number, number][] = [
-  [33, 102, 172],
-  [103, 169, 207],
-  [209, 229, 240],
-  [253, 219, 199],
-  [239, 138, 98],
-  [178, 24, 43],
-];
+const SOURCE_ID = "ihd-points";
+const LAYER_ID = "ihd-points-layer";
 
-function colorFor(value: number, vmin: number, vmax: number): [number, number, number, number] {
-  if (!Number.isFinite(value) || vmax <= vmin) return [200, 200, 200, 200];
-  const t = Math.max(0, Math.min(1, (value - vmin) / (vmax - vmin)));
-  const idx = Math.min(RAMP.length - 1, Math.floor(t * RAMP.length));
-  const [r, g, b] = RAMP[idx];
-  return [r, g, b, 220];
+function toGeoJSON(data: MapDataResponse | undefined) {
+  const features: GeoJSON.Feature[] = [];
+  if (!data) return { type: "FeatureCollection", features } as const;
+
+  if (data.type === "clusters") {
+    for (const c of data.cells) {
+      features.push({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [c.lng, c.lat] },
+        properties: {
+          kind: "cluster",
+          h3: c.h3,
+          count: c.count,
+          ppsm: c.median_price_per_sqm ?? 0,
+          price: c.median_price ?? 0,
+        },
+      });
+    }
+  } else {
+    for (const p of data.features) {
+      features.push({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [p.lng, p.lat] },
+        properties: {
+          kind: "point",
+          id: p.id,
+          ppsm: p.price_per_sqm ?? 0,
+          price: p.price ?? 0,
+          rooms: p.rooms ?? null,
+          area_sqm: p.area_sqm ?? null,
+          city: p.city ?? "",
+          neighborhood: p.neighborhood ?? "",
+          transaction_date: p.transaction_date ?? "",
+        },
+      });
+    }
+  }
+  return { type: "FeatureCollection", features } as const;
 }
 
-// resolution (decimals) -> default cluster radius in meters
-const RADIUS_BY_DECIMALS: Record<number, number> = {
-  1: 5500,
-  2: 550,
-  3: 55,
-};
-
 export function DeckOverlay({ map, data, onPointClick }: DeckOverlayProps) {
-  const overlayRef = useRef<MapboxOverlay | null>(null);
-
-  const layers = useMemo(() => {
-    if (!data) return [];
-
-    if (data.type === "clusters") {
-      const cells = data.cells.filter((c) => c.median_price_per_sqm != null);
-      const values = cells.map((c) => c.median_price_per_sqm as number).sort((a, b) => a - b);
-      const vmin = values[Math.floor(values.length * 0.05)] ?? 0;
-      const vmax = values[Math.floor(values.length * 0.95)] ?? 1;
-      const counts = data.cells.map((c) => c.count);
-      const cmax = Math.max(1, ...counts);
-      const baseRadius = RADIUS_BY_DECIMALS[data.resolution] ?? 500;
-      return [
-        new ScatterplotLayer<ClusterCell>({
-          id: "grid-clusters",
-          data: data.cells,
-          pickable: true,
-          stroked: true,
-          filled: true,
-          radiusUnits: "meters",
-          radiusMinPixels: 6,
-          radiusMaxPixels: 60,
-          lineWidthMinPixels: 1,
-          getPosition: (d) => [d.lng, d.lat],
-          getRadius: (d) => baseRadius * (0.4 + 0.6 * Math.sqrt(d.count / cmax)),
-          getFillColor: (d) => colorFor(d.median_price_per_sqm ?? 0, vmin, vmax),
-          getLineColor: [255, 255, 255, 80],
-          opacity: 0.75,
-          updateTriggers: { getFillColor: [vmin, vmax], getRadius: [cmax, baseRadius] },
-        }),
-      ];
-    }
-
-    const prices = data.features
-      .map((f) => f.price_per_sqm)
-      .filter((v): v is number => v != null)
-      .sort((a, b) => a - b);
-    const vmin = prices[Math.floor(prices.length * 0.05)] ?? 0;
-    const vmax = prices[Math.floor(prices.length * 0.95)] ?? 1;
-    return [
-      new ScatterplotLayer<PointFeature>({
-        id: "points",
-        data: data.features,
-        pickable: true,
-        radiusUnits: "pixels",
-        getRadius: 5,
-        radiusMinPixels: 3,
-        radiusMaxPixels: 8,
-        getPosition: (d) => [d.lng, d.lat],
-        getFillColor: (d) => colorFor(d.price_per_sqm ?? 0, vmin, vmax),
-        getLineColor: [255, 255, 255, 200],
-        lineWidthMinPixels: 1,
-        stroked: true,
-        onClick: (info) => info.object && onPointClick?.(info.object as PointFeature),
-        updateTriggers: { getFillColor: [vmin, vmax] },
-      }),
-    ];
-  }, [data, onPointClick]);
-
+  // Add source + layer once on the map
   useEffect(() => {
     if (!map) return;
-    const overlay = new MapboxOverlay({ layers });
-    overlayRef.current = overlay;
-    map.addControl(overlay as unknown as maplibregl.IControl);
+    const ensureLayer = () => {
+      if (!map.getSource(SOURCE_ID)) {
+        map.addSource(SOURCE_ID, {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+      }
+      if (!map.getLayer(LAYER_ID)) {
+        map.addLayer({
+          id: LAYER_ID,
+          type: "circle",
+          source: SOURCE_ID,
+          paint: {
+            // Radius scales with count for clusters (using sqrt) and is fixed for points
+            "circle-radius": [
+              "case",
+              ["==", ["get", "kind"], "cluster"],
+              ["max", 8, ["min", 40, ["sqrt", ["get", "count"]]]],
+              5,
+            ],
+            // Color scales with price/m² along a red->blue gradient
+            "circle-color": [
+              "interpolate",
+              ["linear"],
+              ["get", "ppsm"],
+              5000, "#33a3d4",
+              15000, "#8ddccd",
+              25000, "#fde0a3",
+              40000, "#f08c69",
+              80000, "#b22834",
+            ],
+            "circle-opacity": 0.8,
+            "circle-stroke-color": "#ffffff",
+            "circle-stroke-width": 1,
+            "circle-stroke-opacity": 0.4,
+          },
+        });
+      }
+    };
+    if (map.isStyleLoaded()) ensureLayer();
+    else map.once("load", ensureLayer);
+
+    const onClick = (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
+      const f = e.features?.[0];
+      if (!f) return;
+      const props = f.properties as Record<string, unknown>;
+      if (props.kind === "point" && onPointClick) {
+        const coords = (f.geometry as GeoJSON.Point).coordinates;
+        onPointClick({
+          id: String(props.id),
+          lng: coords[0],
+          lat: coords[1],
+          price: typeof props.price === "number" ? props.price : null,
+          price_per_sqm: typeof props.ppsm === "number" ? props.ppsm : null,
+          rooms: typeof props.rooms === "number" ? props.rooms : null,
+          area_sqm: typeof props.area_sqm === "number" ? props.area_sqm : null,
+          city: String(props.city || "") || null,
+          neighborhood: String(props.neighborhood || "") || null,
+          transaction_date: String(props.transaction_date || "") || null,
+        });
+      } else if (props.kind === "cluster") {
+        // Zoom in on cluster click
+        const coords = (f.geometry as GeoJSON.Point).coordinates;
+        map.flyTo({ center: [coords[0], coords[1]], zoom: Math.min(15, map.getZoom() + 2) });
+      }
+    };
+    const onEnter = () => { map.getCanvas().style.cursor = "pointer"; };
+    const onLeave = () => { map.getCanvas().style.cursor = ""; };
+
+    map.on("click", LAYER_ID, onClick);
+    map.on("mouseenter", LAYER_ID, onEnter);
+    map.on("mouseleave", LAYER_ID, onLeave);
+
     return () => {
+      map.off("click", LAYER_ID, onClick);
+      map.off("mouseenter", LAYER_ID, onEnter);
+      map.off("mouseleave", LAYER_ID, onLeave);
       try {
-        map.removeControl(overlay as unknown as maplibregl.IControl);
+        if (map.getLayer(LAYER_ID)) map.removeLayer(LAYER_ID);
+        if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
       } catch {
         // map may already be torn down
       }
-      overlayRef.current = null;
     };
-  }, [map]);
+  }, [map, onPointClick]);
 
+  // Update source data when API data changes
   useEffect(() => {
-    overlayRef.current?.setProps({ layers });
-  }, [layers]);
+    if (!map) return;
+    const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
+    source.setData(toGeoJSON(data) as GeoJSON.FeatureCollection);
+  }, [map, data]);
 
   return null;
 }

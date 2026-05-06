@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Brain, Loader2, GitCompare } from "lucide-react";
+import { Brain, Loader2, GitCompare, MapPin, Search } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { useModels } from "@/hooks/useProperty";
 import { modelDisplayName } from "@/lib/model-utils";
+import { searchPlaces, formatAddress } from "@/lib/geocoding";
 
 interface FieldDef {
   key: string;
@@ -62,13 +63,59 @@ export function PredictPlayground() {
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [compareMode, setCompareMode] = useState(false);
 
+  // Address / location state — geocoded to lat/lng + city/street.
+  const [address, setAddress] = useState("");
+  const [resolved, setResolved] = useState<{
+    lat: number;
+    lon: number;
+    label: string;
+    city?: string;
+    street?: string;
+  } | null>(null);
+  const [geocoding, setGeocoding] = useState(false);
+  const [geocodeError, setGeocodeError] = useState<string | null>(null);
+
+  const handleGeocode = async () => {
+    if (!address.trim()) return;
+    setGeocoding(true);
+    setGeocodeError(null);
+    try {
+      const features = await searchPlaces(address, { limit: 1 });
+      const f = features[0];
+      if (!f) {
+        setGeocodeError("לא נמצאה כתובת");
+        setResolved(null);
+      } else {
+        const [lon, lat] = f.geometry.coordinates;
+        const props = f.properties as Record<string, string | undefined>;
+        setResolved({
+          lat,
+          lon,
+          label: formatAddress(f),
+          city: props.city ?? props.district ?? props.county,
+          street: props.street,
+        });
+      }
+    } catch {
+      setGeocodeError("שגיאה ב-geocoding");
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
   const buildFeatures = () => {
-    const out: Record<string, number> = {};
+    const out: Record<string, number | string> = {};
     for (const f of FIELDS) {
       const v = values[f.key];
       if (v === "" || v == null) continue;
       const n = Number(v);
       if (Number.isFinite(n)) out[f.key] = n;
+    }
+    if (resolved) {
+      out.lat = resolved.lat;
+      out.lon = resolved.lon;
+      if (resolved.city) out.city = resolved.city;
+      if (resolved.street) out.street = resolved.street;
     }
     return out;
   };
@@ -101,8 +148,45 @@ export function PredictPlayground() {
         <h3 className="text-sm font-semibold text-white">מגרש משחקים — ניבוי מחיר</h3>
       </div>
       <p className="mb-4 text-xs text-zinc-500">
-        מלא את הפיצ'רים ולחץ על הכפתור. שדות חסרים יוחלפו ב-null. לתוצאות מדויקות יותר השתמש בנכס אמיתי מ-/map.
+        מלא את הפיצ'רים ולחץ על הכפתור. שדות חסרים יוחלפו ב-null. הוסף כתובת לתוצאה מדויקת יותר.
       </p>
+
+      <div className="mb-4 rounded-md border border-white/10 bg-zinc-950/40 p-3">
+        <div className="mb-2 flex items-center gap-2 text-xs font-medium text-zinc-300">
+          <MapPin className="h-3.5 w-3.5 text-cyan-400" />
+          כתובת הנכס
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            type="text"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleGeocode()}
+            placeholder="לדוגמה: רוטשילד 22 תל אביב"
+            className="flex-1 rounded-md border border-white/10 bg-zinc-950/60 px-2.5 py-1.5 text-sm text-white placeholder:text-zinc-500 focus:border-cyan-500/50 focus:outline-none"
+          />
+          <button
+            onClick={handleGeocode}
+            disabled={geocoding || !address.trim()}
+            className="flex items-center justify-center gap-2 rounded-md border border-white/10 bg-zinc-950/60 px-3 py-1.5 text-sm text-white hover:bg-white/5 disabled:opacity-50"
+          >
+            {geocoding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+            חפש
+          </button>
+        </div>
+        {resolved && (
+          <div className="mt-2 flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs">
+            <MapPin className="h-3 w-3 text-emerald-400" />
+            <span className="text-zinc-200">{resolved.label}</span>
+            <span className="text-zinc-500">
+              ({resolved.lat.toFixed(4)}, {resolved.lon.toFixed(4)})
+            </span>
+          </div>
+        )}
+        {geocodeError && (
+          <div className="mt-2 text-xs text-rose-300">{geocodeError}</div>
+        )}
+      </div>
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
         {FIELDS.map((f) => (

@@ -13,10 +13,19 @@ COLLECTION_NAME = os.getenv("FEATURES_COLLECTION", "normalized_records")
 MAX_POINTS = int(os.getenv("MAP_POINTS_LIMIT", "2000"))
 
 
+# Trim residential outliers — entire buildings, land, data errors.
+_RESIDENTIAL = {
+    "price": {"$gt": 100_000, "$lt": 50_000_000},
+    "price_per_sqm": {"$gt": 1000, "$lt": 200_000},
+    "area_sqm": {"$gt": 15, "$lt": 1000},
+}
+
+
 def _bbox_match(min_lat: float, max_lat: float, min_lng: float, max_lng: float) -> dict[str, Any]:
     return {
         "lat": {"$gte": min_lat, "$lte": max_lat, "$ne": None},
         "lon": {"$gte": min_lng, "$lte": max_lng, "$ne": None},
+        **_RESIDENTIAL,
     }
 
 
@@ -25,13 +34,13 @@ def _filters_to_query(f: MapFilters | None) -> dict[str, Any]:
         return {}
     q: dict[str, Any] = {}
     if f.city:
-        q["city"] = f.city
+        q["city_name"] = f.city
     if f.neighborhood:
         q["neighborhood"] = f.neighborhood
     if f.property_type:
         q["deal_nature"] = f.property_type
     if f.source:
-        q["source_name"] = f.source
+        q["source"] = f.source
     if f.min_price is not None or f.max_price is not None:
         q["price"] = {}
         if f.min_price is not None:
@@ -111,7 +120,7 @@ class FeaturesRepository:
             "price_per_sqm": 1,
             "rooms": 1,
             "area_sqm": 1,
-            "city": 1,
+            "city_name": 1,
             "neighborhood": 1,
             "transaction_date": 1,
         }

@@ -111,7 +111,7 @@ class MapService:
                     price_per_sqm=d.get("price_per_sqm"),
                     rooms=d.get("rooms"),
                     area_sqm=d.get("area_sqm"),
-                    city=d.get("city"),
+                    city=d.get("city_name") or d.get("city"),
                     neighborhood=d.get("neighborhood"),
                     transaction_date=d.get("transaction_date"),
                 )

@@ -195,6 +195,67 @@ curl -X POST http://localhost:8000/api/v1/predict/compare \
   -d '{"features": {...}}'
 ```
 
+### 🚨 איך מודל חדש מופיע ב-API ובדשבורד
+
+ה-API מציג **רק** מודלים שיש להם artifact בפועל ב-`prediction_service/artifacts/<owner>/<name>/model.joblib`. הוספת קוד מודל ב-`prediction_service/models/<owner>/<name>.py` **לא מספיקה** — צריך גם לאמן ולשמור.
+
+**שלב 1 — אימון (אצל החוקר):**
+```bash
+cd prediction_service
+python run.py udi/nn_v3        # מאמן + שומר ל-artifacts/udi/nn_v3/
+python run.py udi/blend_v1
+# וכו'
+```
+זה יוצר:
+- `artifacts/udi/nn_v3/model.joblib`
+- `artifacts/udi/nn_v3/metrics.json`
+- `artifacts/udi/nn_v3/run_metadata.json`
+
+**שלב 2 — שיתוף ה-artifact** (כי `prediction_service/.gitignore` חוסם `artifacts/` ו-`*.joblib`):
+
+האפשרויות (לפי סדר פשטות):
+
+**א. push ל-git עם force-add** (מהיר, פחות אלגנטי לקבצים גדולים):
+```bash
+cd prediction_service
+git add -f artifacts/udi/
+git commit -m "models: add udi/<name> artifact"
+git push
+```
+ושותפים: `git pull` ואז `docker compose restart prediction_service`.
+
+**ב. שיתוף ידני** (Drive / Dropbox / S3):
+המאמן מעלה את התיקייה `artifacts/udi/<name>/` לשירות שיתוף, השותף מוריד ושם תחת `prediction_service/artifacts/udi/<name>/` במחשבו, ואז `docker compose restart prediction_service`.
+
+**ג. Git LFS** (לטווח ארוך, מומלץ לקבצים גדולים):
+```bash
+brew install git-lfs
+git lfs install
+cd prediction_service
+git lfs track "artifacts/**/*.joblib"
+git add .gitattributes artifacts/udi/
+git commit -m "models: udi artifacts via LFS"
+git push
+```
+
+**שלב 3 — אימות:**
+```bash
+docker compose restart prediction_service
+make models                                 # רואים את המודל החדש?
+curl http://localhost:8000/api/v1/predict/models | jq '.[] | .id'
+```
+המודל יופיע גם ב-`/ai`, גם בדרופדאון של `/property/[id]`, וגם ב-`/predict/compare`.
+
+**שלב 4 — בחירת champion** (אופציונלי):
+```bash
+make champion MODEL=udi/nn_v4
+# מעדכן CHAMPION_MODEL ב-.env ועושה restart
+```
+
+### למה ה-artifacts לא ב-git כברירת מחדל
+
+`prediction_service/.gitignore` חוסם `artifacts/` ו-`*.joblib` כי קבצי מודל הם binary blobs (5MB-500MB+), משתנים בכל אימון, ומנפחים את ה-history. זה תקני בפרויקטי ML. הפתרון הנכון לטווח ארוך הוא **Git LFS** (אופציה ג') או **registry** (MLflow / S3 / DVC).
+
 ---
 
 ## Strategy של clustering מפה

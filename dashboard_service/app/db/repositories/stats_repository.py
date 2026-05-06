@@ -12,6 +12,29 @@ from app.db.repositories.features_repository import _filters_to_query
 
 COLLECTION_NAME = os.getenv("FEATURES_COLLECTION", "normalized_records")
 
+# Field aliases — keep API params (city, source) stable while reading the
+# actual normalized_records field names.
+_CITY = "city_name"
+_SOURCE = "source"
+
+# Trim residential outliers — entire buildings, land, data errors.
+RESIDENTIAL_FILTER = {
+    "price": {"$gt": 100_000, "$lt": 50_000_000},
+    "price_per_sqm": {"$gt": 1000, "$lt": 200_000},
+    "area_sqm": {"$gt": 15, "$lt": 1000},
+}
+
+
+def _apply_residential(match: dict) -> dict:
+    """Merge the residential bounds into an existing match dict (without overriding)."""
+    for k, v in RESIDENTIAL_FILTER.items():
+        if k not in match:
+            match[k] = v
+        elif isinstance(match[k], dict):
+            for op, val in v.items():
+                match[k].setdefault(op, val)
+    return match
+
 
 class StatsRepository:
     def __init__(self) -> None:
@@ -19,9 +42,9 @@ class StatsRepository:
 
     async def summary(self, filters: MapFilters | None = None) -> dict[str, Any]:
         """KPIs: count, avg price, avg ₪/m², date range, distinct cities."""
-        match = _filters_to_query(filters)
+        match = _apply_residential(_filters_to_query(filters))
         pipeline = [
-            {"$match": match} if match else {"$match": {}},
+            {"$match": match},
             {
                 "$group": {
                     "_id": None,
@@ -30,7 +53,7 @@ class StatsRepository:
                     "avg_price_per_sqm": {"$avg": "$price_per_sqm"},
                     "min_date": {"$min": "$transaction_date"},
                     "max_date": {"$max": "$transaction_date"},
-                    "distinct_cities": {"$addToSet": "$city"},
+                    "distinct_cities": {"$addToSet": f"${_CITY}"},
                 }
             },
             {
@@ -54,7 +77,7 @@ class StatsRepository:
         filters: MapFilters | None = None,
     ) -> list[dict[str, Any]]:
         """Avg price + volume by time bucket."""
-        match = _filters_to_query(filters)
+        match = _apply_residential(_filters_to_query(filters))
         match.setdefault("transaction_date", {"$ne": None})
 
         date_format = {"month": "%Y-%m", "quarter": "%Y-Q", "year": "%Y"}.get(granularity, "%Y-%m")
@@ -96,13 +119,14 @@ class StatsRepository:
             level = "city"
         if metric not in ("avg_price_per_sqm", "avg_price", "count"):
             metric = "avg_price_per_sqm"
-        match = _filters_to_query(filters)
-        match.setdefault(level, {"$ne": None})
+        match = _apply_residential(_filters_to_query(filters))
+        db_field = _CITY if level == "city" else level
+        match.setdefault(db_field, {"$ne": None})
         pipeline = [
             {"$match": match},
             {
                 "$group": {
-                    "_id": f"${level}",
+                    "_id": f"${db_field}",
                     "avg_price": {"$avg": "$price"},
                     "avg_price_per_sqm": {"$avg": "$price_per_sqm"},
                     "count": {"$sum": 1},
@@ -123,10 +147,21 @@ class StatsRepository:
         """Histogram of `field`. Uses $bucketAuto."""
         if field not in ("price", "price_per_sqm", "rooms", "area_sqm", "year_built"):
             field = "price"
-        match = _filters_to_query(filters)
-        match.setdefault(field, {"$ne": None})
+        match = _apply_residential(_filters_to_query(filters))
+        # Require numeric, non-null, and trim outliers so $bucketAuto doesn't
+        # produce a single huge tail bucket.
+        match.setdefault(field, {})
+        match[field]["$ne"] = None
+        match[field]["$gt"] = 0
+        # Reasonable upper bound for ILS price/area/year fields:
+        upper = {"price": 50_000_000, "price_per_sqm": 200_000,
+                 "rooms": 30, "area_sqm": 2000, "year_built": 2030}.get(field)
+        if upper:
+            match[field]["$lte"] = upper
+
         pipeline = [
             {"$match": match},
+            {"$match": {field: {"$type": "number"}}},
             {
                 "$bucketAuto": {
                     "groupBy": f"${field}",
@@ -147,11 +182,14 @@ class StatsRepository:
 
     async def yoy_by_city(self, top: int = 20) -> list[dict[str, Any]]:
         """Year-over-year price change %, by city. Compares last full year vs prev."""
+        base_match = _apply_residential({})
+        base_match[_CITY] = {"$ne": None}
+        base_match["transaction_date"] = {"$ne": None}
         pipeline = [
-            {"$match": {"city": {"$ne": None}, "transaction_date": {"$ne": None}, "price_per_sqm": {"$ne": None}}},
+            {"$match": base_match},
             {
                 "$group": {
-                    "_id": {"city": "$city", "year": {"$year": "$transaction_date"}},
+                    "_id": {"city": f"${_CITY}", "year": {"$year": "$transaction_date"}},
                     "avg_price_per_sqm": {"$avg": "$price_per_sqm"},
                     "count": {"$sum": 1},
                 }
@@ -199,7 +237,7 @@ class StatsRepository:
         pipeline = [
             {
                 "$group": {
-                    "_id": "$source_name",
+                    "_id": f"${_SOURCE}",
                     "count": {"$sum": 1},
                     "max_date": {"$max": "$transaction_date"},
                 }

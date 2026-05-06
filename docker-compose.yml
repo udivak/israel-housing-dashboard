@@ -35,7 +35,7 @@ services:
     env_file:
       - .env
     environment:
-      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017}
     depends_on:
       mongo:
         condition: service_healthy
@@ -81,7 +81,10 @@ services:
     env_file:
       - .env
     environment:
-      MONGO_URI: mongodb://mongo:27017
+      # Fall back to internal mongo only if .env didn't set it.
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
+      DB_NAME: ${DB_NAME:-israel_housing}
+      FEATURES_COLLECTION: ${FEATURES_COLLECTION:-normalized_records}
       PREDICTION_SERVICE_URL: http://prediction_service:8002
     depends_on:
       mongo:

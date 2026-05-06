@@ -28,6 +28,11 @@ def _serialize(doc: dict[str, Any]) -> dict[str, Any]:
     out = dict(doc)
     if "_id" in out:
         out["id"] = str(out.pop("_id"))
+    # Alias normalized_records' field names to the dashboard's expected names.
+    if "city_name" in out and "city" not in out:
+        out["city"] = out["city_name"]
+    if "source" in out and "source_name" not in out:
+        out["source_name"] = out["source"]
     return out
 
 
