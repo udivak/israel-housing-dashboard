@@ -24,6 +24,7 @@ def main() -> int:
     skip_normalize = _is_truthy(os.getenv("PIPELINE_SKIP_NORMALIZE"))
     skip_osm = _is_truthy(os.getenv("PIPELINE_SKIP_OSM"))
     skip_temporal = _is_truthy(os.getenv("PIPELINE_SKIP_TEMPORAL"))
+    skip_load = _is_truthy(os.getenv("PIPELINE_SKIP_LOAD_TO_MONGO"))
 
     python = sys.executable
 
@@ -41,6 +42,9 @@ def main() -> int:
 
     if not skip_temporal:
         _run_step("Temporal+macro features -> XLSX", [python, "-m", "pre_processing.pipelines.temporal_macro_feature_pipeline"])
+
+    if not skip_load:
+        _run_step("Load enriched features to Mongo", [python, "-m", "pre_processing.pipelines.load_to_mongo"])
 
     print("\n✅ Pipeline completed successfully.")
     return 0

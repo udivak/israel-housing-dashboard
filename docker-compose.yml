@@ -127,6 +127,7 @@ services:
       PARCEL_PATH: /data/parcel_all/PARCEL_ALL.shp
       FEATURES_OUTPUT_CSV: /outputs/features_osm.csv
       TEMPORAL_OUTPUT_XLSX: /outputs/temporal_features.xlsx
+      OUTPUTS_DIR: /outputs
     volumes:
       - ./data/osm:/data/osm:ro
       - ./data/parcel_all:/data/parcel_all:ro
