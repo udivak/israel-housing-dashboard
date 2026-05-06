@@ -1,8 +1,6 @@
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
-artifacts/
 .env
 .venv/
 venv/
-*.joblib
