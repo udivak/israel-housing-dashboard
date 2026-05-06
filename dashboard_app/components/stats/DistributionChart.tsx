@@ -1,0 +1,68 @@
+"use client";
+
+import { useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { useDistribution } from "@/hooks/useStats";
+import { ChartCard, fmtNum } from "./ChartCard";
+
+const FIELDS = [
+  { value: "price" as const, label: "מחיר" },
+  { value: "price_per_sqm" as const, label: "₪/m²" },
+  { value: "rooms" as const, label: "חדרים" },
+  { value: "area_sqm" as const, label: "שטח" },
+  { value: "year_built" as const, label: "שנת בנייה" },
+];
+
+type Field = (typeof FIELDS)[number]["value"];
+
+export function DistributionChart({ city }: { city?: string }) {
+  const [field, setField] = useState<Field>("price");
+  const { data = [], isLoading } = useDistribution(field, 30, city);
+
+  const chartData = data.map((b) => ({
+    label: `${fmtNum(b.min)}–${fmtNum(b.max)}`,
+    count: b.count,
+  }));
+
+  return (
+    <ChartCard title="התפלגות" subtitle={city ?? "ארץ"} className="h-80">
+      <div className="mb-2 flex flex-wrap gap-1">
+        {FIELDS.map((f) => (
+          <button
+            key={f.value}
+            onClick={() => setField(f.value)}
+            className={`rounded-md px-2 py-1 text-xs ${
+              field === f.value ? "bg-cyan-500/20 text-cyan-300" : "text-zinc-400 hover:bg-white/5"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+      {isLoading ? (
+        <div className="flex h-48 items-center justify-center text-xs text-zinc-500">טוען…</div>
+      ) : (
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+            <CartesianGrid stroke="#3f3f46" strokeDasharray="3 3" />
+            <XAxis dataKey="label" stroke="#71717a" fontSize={9} interval="preserveStartEnd" />
+            <YAxis stroke="#71717a" fontSize={11} />
+            <Tooltip
+              contentStyle={{ backgroundColor: "#18181b", border: "1px solid #3f3f46", color: "#fff" }}
+              formatter={(value: number) => [fmtNum(value), "מספר עסקאות"]}
+            />
+            <Bar dataKey="count" fill="#a78bfa" radius={[2, 2, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </ChartCard>
+  );
+}

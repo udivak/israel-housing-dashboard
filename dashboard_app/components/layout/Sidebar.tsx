@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   LayoutDashboard,
   Map,
   Sparkles,
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/map", label: "Map", icon: Map },
+  { href: "/stats", label: "Stats", icon: BarChart3 },
   { href: "/ai", label: "AI Modules", icon: Sparkles },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
