@@ -18,6 +18,8 @@ eggs/
 lib/
 !streamlit_app/lib/
 !streamlit_app/lib/**
+!dashboard_app/lib/
+!dashboard_app/lib/**
 lib64/
 parts/
 sdist/
