@@ -1,42 +1,56 @@
 # Israel Housing Dashboard
 
-פלטפורמת הנדסת נתונים לאיסוף, אחסון והצגת נתוני שוק הדיור בישראל ממקורות open-data מרובים.
+פלטפורמה לאיסוף, עיבוד, ניתוח וניבוי של מחירי שוק הנדל"ן בישראל. מערכת מיקרו-שירותים תחת `docker compose` עם דשבורד אינטראקטיבי, מפת חום היררכית ו-7 מודלי ML מאומנים.
 
 ---
 
 ## ארכיטקטורה
 
-המערכת מורכבת מחמישה שירותים רצים בקונטיינרים:
-
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              Docker Network                                 │
-│                                                                             │
-│  ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────────┐ │
-│  │  dashboard_app   │     │  streamlit_app   │     │   collector_service  │ │
-│  │  (Next.js:3000) │     │  (Streamlit:8501)│     │   (FastAPI:8001)     │ │
-│  └────────┬────────┘     └────────┬────────┘     └──────────┬──────────┘ │
-│           │                        │                          │            │
-│           │ NEXT_PUBLIC_API_URL    │ API_URL                   │            │
-│           ▼                        ▼                          ▼            │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                    dashboard_service (FastAPI:8000)                  │   │
-│  │              API גאו-מרחבי: שכבות מפה, GeoJSON, חיפוש               │   │
-│  └───────────────────────────────────────────┬─────────────────────────┘   │
-│                                              │                              │
-│                                              ▼                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                         MongoDB (:27017)                              │   │
-│  │  raw_records, properties, districts, parcels, scrape_jobs, sources   │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────┘
+                                             ┌───────────────────────────────┐
+                                             │  המשתמש (דפדפן)               │
+                                             │  http://localhost:3000        │
+                                             └───────────────┬───────────────┘
+                                                             │
+                            ┌────────────────────────────────▼─────────────────────────────────┐
+                            │  dashboard_app  (Next.js 16 + React 19 + MapLibre + deck.gl)     │
+                            │  /map  /stats  /property/[id]                                    │
+                            └────────────────────────────────┬─────────────────────────────────┘
+                                                             │  /api/v1/*
+                                                             ▼
+              ┌──────────────────────────────────────────────────────────────────────────────┐
+              │  dashboard_service  (FastAPI · :8000)  ←  API gateway                        │
+              │   /map/data           clusters/points by zoom (H3)                           │
+              │   /properties/*       search · autocomplete · detail · similar               │
+              │   /stats/*            summary · timeseries · by-region · distribution …      │
+              │   /predict[/compare]  proxy + model selection + comparison                   │
+              └──────┬──────────────────────────────────┬────────────────────────────┬───────┘
+                     │ Motor (async Mongo)              │ httpx                      │
+                     ▼                                  ▼                            │
+        ┌──────────────────────────┐       ┌────────────────────────────────┐        │
+        │  MongoDB (cloud / local) │       │  prediction_service (:8002)    │        │
+        │   raw_records            │       │   FastAPI + LRU cache          │        │
+        │   features_enriched ──┐  │       │   /models /predict /compare    │        │
+        │     2dsphere idx      │  │       │                                │        │
+        │     h3_r5 / r7 / r8   │  │       │   artifacts/  (bind-mount RO)  │        │
+        │     text idx          │  │       │     moses/lightgbm_v1/         │        │
+        └──────────────────────────┘       │     moses/stacked_v2/  (...)   │        │
+                     ▲                     └────────────────────────────────┘        │
+                     │ ETL / scrapers                                                │
+                     │                                                               │
+        ┌────────────┴───────────┐    ┌───────────────────────────────┐              │
+        │  pre_processing        │    │  collector_service  (:8001)   │ ◄────────────┘
+        │  (profile=batch)       │    │   FastAPI + Playwright        │
+        │   profiler             │    │   sources:                    │
+        │   geom backfill        │    │     odata.org.il              │
+        │   normalize            │    │     Govmap (rashut)           │
+        │   OSM features         │    │     CBS                       │
+        │   temporal+macro       │    │     Madlan                    │
+        │   load_to_mongo  ★     │    └───────────────────────────────┘
+        └────────────────────────┘
 ```
 
-**זרימת נתונים:**
-- **collector_service** – שולף נתונים ממקורות חיצוניים (odata.org.il, madlan, CBS, Govmap) ומכניס ל-MongoDB
-- **dashboard_service** – קורא מ-MongoDB ומגיש API גאו-מרחבי (שכבות, GeoJSON)
-- **dashboard_app** – פרונטאנד Next.js, קורא ל-dashboard_service מהדפדפן
-- **streamlit_app** – פרונטאנד Streamlit לבדיקות, קורא ל-dashboard_service מהשרת
+`★` `load_to_mongo` הוא ה-pipeline שמייצר את ה-collection `features_enriched` עם H3 indices לקלסטרינג זום-מודע. הוא הקלף החשוב ביותר במערכת.
 
 ---
 
@@ -44,209 +58,231 @@
 
 ```
 israel-housing-dashboard/
-├── docker-compose.yml      # אורקסטרציה של כל השירותים
-├── .env.example            # משתני סביבה – העתק ל-.env
-├── collector_service/      # איסוף נתונים – scrapers, jobs, Playwright
-├── dashboard_service/      # FastAPI – API גאו-מרחבי
-├── dashboard_app/          # Next.js – דשבורד, מפה, חיפוש
-└── streamlit_app/          # Streamlit – לבדיקות ו-QA
+├── docker-compose.yml          ← אורקסטרציה מאוחדת (default + batch + qa profiles)
+├── Makefile                    ← קיצורים לפקודות נפוצות
+├── .env.example                ← תבנית סביבה (העתק ל-.env)
+│
+├── collector_service/          ← FastAPI · scrapers · raw_records
+├── dashboard_service/          ← FastAPI · API gateway · features_enriched + stats
+├── dashboard_app/              ← Next.js · map · stats · property · prediction UI
+├── prediction_service/         ← FastAPI · multi-model serving · 7 trained models
+├── pre_processing/             ← ETL pipelines · OSM · temporal · load_to_mongo
+├── streamlit_app/              ← Streamlit QA tools
+│
+├── docs/                       ← תיעוד · diagrams · raw_records_mapping · legacy
+└── pre_processing/outputs/     ← CSV/XLSX (gitignored)
 ```
 
 ---
 
-## הרצה מהירה (Docker Compose)
-
-**דרישות:** Docker ו-Docker Compose מותקנים.
-
-### שלב 1: הכנת סביבה
-
-```bash
-# מהתיקייה הראשית של הפרויקט
-cp .env.example .env
-```
-
-הקובץ `.env` מכיל כבר ערכי ברירת מחדל. ערוך לפי הצורך (למשל `ODATA_IL_RESOURCE_ID`).
-
-### שלב 2: הרצת כל השירותים
-
-```bash
-docker compose up --build
-```
-
-בפעם הראשונה יבנה את כל התמונות (כדקה–שתיים). בהרצות הבאות:
-
-```bash
-docker compose up
-```
-
-### שלב 3: גישה לשירותים
-
-| שירות | URL | תיאור |
-|-------|-----|-------|
-| **דשבורד (Next.js)** | http://localhost:3000 | פרונטאנד ראשי, מפה, חיפוש |
-| **Streamlit** | http://localhost:8501 | פרונטאנד לבדיקות |
-| **Dashboard API** | http://localhost:8000 | API גאו-מרחבי |
-| **Swagger (Dashboard)** | http://localhost:8000/docs | תיעוד API |
-| **Collector API** | http://localhost:8001 | API איסוף נתונים |
-| **Swagger (Collector)** | http://localhost:8001/docs | תיעוד Collector |
-| **MongoDB** | localhost:27017 | מסד נתונים |
-
-### פקודות שימושיות
-
-```bash
-# הרצה ברקע
-docker compose up -d
-
-# עצירה
-docker compose down
-
-# צפייה בלוגים
-docker compose logs -f
-
-# לוגים של שירות ספציפי
-docker compose logs -f dashboard_service
-```
-
----
-
-## הרצה ללא Docker (פיתוח מקומי)
-
-אם מעדיפים להריץ ללא קונטיינרים:
-
-### 1. MongoDB
-
-```bash
-docker run -d -p 27017:27017 --name mongodb mongo:7
-```
-
-או שימוש ב-Atlas – עדכן `MONGO_URI` ב-.env.
-
-### 2. Backend (dashboard_service)
-
-```bash
-cd dashboard_service
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-cp .env.example .env
-.venv/bin/uvicorn app.main:app --reload --port 8000
-```
-
-### 3. Frontend (dashboard_app)
-
-```bash
-cd dashboard_app
-npm install
-cp .env.example .env.local
-# ערוך .env.local: NEXT_PUBLIC_API_URL=http://localhost:8000
-npm run dev
-```
-
-### 4. Streamlit (אופציונלי)
-
-```bash
-cd streamlit_app
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-cp .env.example .env
-# ערוך .env: API_URL=http://localhost:8000
-.venv/bin/streamlit run app.py
-```
-
-### 5. Collector (אופציונלי)
-
-להרצת collector + MongoDB בלבד:
-
-```bash
-cd collector_service
-cp .env.example .env
-docker compose up --build
-```
-
----
-
-## שירותים – פירוט
+## שירותים — מי עושה מה
 
 | שירות | טכנולוגיה | פורט | תפקיד |
 |-------|-----------|------|-------|
-| **mongo** | MongoDB 7 | 27017 | מסד נתונים משותף |
-| **collector_service** | FastAPI, Python 3.12, Playwright | 8001 | איסוף נתונים ממקורות חיצוניים |
-| **dashboard_service** | FastAPI, Python 3.11 | 8000 | API גאו-מרחבי, שכבות מפה, GeoJSON |
-| **dashboard_app** | Next.js 16, React 19 | 3000 | פרונטאנד ראשי |
-| **streamlit_app** | Streamlit | 8501 | פרונטאנד לבדיקות |
+| `mongo` | MongoDB 7 | 27017 (פנימי) | מסד נתונים — לוקאלי או Atlas |
+| `collector_service` | FastAPI · Playwright | 8001 | scraping למקורות חיצוניים → `raw_records` |
+| `pre_processing` | Python · pandas · h3 · geopandas | — | ETL: `raw_records` → `features_enriched` |
+| `prediction_service` | FastAPI · LRU model cache | פנימי 8002 | multi-model ML serving |
+| `dashboard_service` | FastAPI · Motor · httpx | 8000 | API gateway — חשוף ל-frontend |
+| `dashboard_app` | Next.js 16 · MapLibre · deck.gl · recharts | 3000 | UI — מפה · סטטיסטיקות · נכסים · ניבוי |
+| `streamlit_app` | Streamlit | 8501 | כלי QA אופציונלי |
+
+---
+
+## הרצה מהירה
+
+```bash
+# 1. תבנית סביבה
+cp .env.example .env
+# ערוך MONGO_URI ל-Atlas או השאר את הברירת המחדל ל-Mongo בקונטיינר
+
+# 2. הרמת המערכת
+make up                # = docker compose up --build -d
+
+# 3. (חד-פעמי) טעינת features_enriched
+make load-mongo        # מ-Python מקומי, מתאים גם ל-Atlas
+# או
+make preprocess        # מריץ את ה-pipeline המלא ב-Docker
+
+# 4. גישה
+open http://localhost:3000           # דשבורד
+open http://localhost:8000/docs      # Swagger של ה-API
+```
+
+מצב MapPage רואים ריק? סביר שעדיין לא טענת את `features_enriched`. הרץ `make load-mongo`.
+
+---
+
+## פקודות ה-Makefile
+
+```bash
+make help                  # רשימת כל הפקודות
+make up                    # הרמת המערכת
+make down                  # עצירה
+make logs                  # לוגים של כולם
+make logs-dashboard        # רק dashboard_service
+make health                # בדיקת בריאות לכל השירותים
+make models                # רשימת מודלים זמינים ל-prediction
+make champion MODEL=moses/stacked_v2   # החלפת champion (ללא rebuild)
+make preprocess            # batch ETL
+make streamlit             # QA tool
+make clean                 # עצירה + מחיקת volumes (מוחק נתונים)
+```
 
 ---
 
 ## מקורות נתונים
 
-| שם | סטטוס | תיאור |
-|----|-------|-------|
-| `odata_il_nadlan` | פעיל | עסקאות נדל"ן – odata.org.il (ZIP → CSV) |
-| `tax_authority_nadlan` | פעיל | עסקאות נדל"ן – Govmap (רשות המיסים) |
-| `cbs_housing` | פעיל | מדדי מחירי דיור ושכר דירה – הלמ"ס |
-| `madlan_for_sale` | פעיל | מודעות למכירה – madlan.co.il (Playwright) |
+| מקור | סטטוס | תיאור |
+|------|-------|-------|
+| `nadlan_gov` | פעיל | עסקאות נדל״ן גוש/חלקה (Govmap) |
+| `odata_il_nadlan` | פעיל | עסקאות נדל״ן ZIP→CSV (odata.org.il) |
+| `tax_authority_nadlan` | פעיל | עסקאות נדל״ן רשות המסים |
+| `madlan_for_sale` | פעיל | מודעות למכירה (madlan.co.il, Playwright) |
+| `cbs_housing` | פעיל | מדדי מחירי דיור ושכר דירה (CBS) |
 
 ---
 
-## משתני סביבה
+## הדשבורד — מה רואים
 
-הקובץ `.env.example` מכיל את כל המשתנים. העתק ל-`.env` וערוך:
+**`/map`** — מפה אינטראקטיבית
+- Hexagons (H3) בזום נמוך, נקודות בודדות בזום גבוה — מעבר אוטומטי
+- צבע diverging לפי `avg_price_per_sqm` בכל אזור
+- סינון לפי עיר/שכונה/מחיר/חדרים/שטח/תאריך/סוג נכס/מקור
+- KPI strip מעל המפה: עסקאות · מחיר ממוצע · ₪/m² · ערים בנתונים
+- חיפוש כתובת (Photon geocoder) + click על נקודה לפתיחת פאנל פרטים
 
-| משתנה | ברירת מחדל | תיאור |
-|-------|------------|-------|
-| `MONGODB_URI` / `MONGO_URI` | `mongodb://mongo:27017` | חיבור MongoDB (ב-Docker: `mongo` = שם השירות) |
-| `MONGODB_DB_NAME` / `DB_NAME` | `israel_housing` | שם מסד הנתונים |
-| `ODATA_IL_RESOURCE_ID` | (UUID) | מזהה משאב ב-odata.org.il |
-| `MADLAN_HEADLESS` | `true` | Playwright במצב headless |
-| `SCRAPER_*` | — | timeout, retries, delays |
+**`/stats`** — סטטיסטיקות
+- Timeseries לבחירה של חודש/רבעון/שנה
+- Top ערים/שכונות לפי ₪/m²
+- Histogram של מחיר/₪/m²/חדרים/שטח/שנת בנייה
+- ערים מתחממות (YoY) — שנה לאחור
+- עונתיות חודשית
+- פילוח לפי מקור ולפי סוג נכס
 
----
-
-## Collector Service — API Reference
-
-כל ה-endpoints מתחילים ב-`/api/v1`. מבנה תשובה:
-
-```json
-{
-  "success": true,
-  "data": { ... },
-  "message": ""
-}
-```
-
-### Health
-
-- **GET /health** – Liveness (`{ "status": "ok" }`)
-- **GET /ready** – Readiness (בודק חיבור MongoDB)
-
-### Collection
-
-- **POST /api/v1/collect/source/{source_name}** – הפעלת job לאיסוף ממקור בודד
-- **POST /api/v1/collect/all** – הפעלת איסוף מכל המקורות
-
-### Jobs
-
-- **GET /api/v1/jobs** – רשימת jobs (עם pagination)
-- **GET /api/v1/jobs/{job_id}** – פרטי job
-- **GET /api/v1/jobs/all** – כל ה-jobs (עד 1000)
-
-### Sources
-
-- **GET /api/v1/sources** – רשימת מקורות רשומים
-- **GET /api/v1/collections/status** – סיכום הרצה אחרונה לכל מקור
-
-Swagger מלא: http://localhost:8001/docs
+**`/property/[id]`** — דף נכס
+- כותרת + KPIs (שטח, חדרים, קומה, גיל, ...)
+- מפה ממוקדת
+- 8 נכסים דומים ברדיוס 800m
+- **ניבוי מחיר**: בחירת מודל בודד מהרשימה, או "השוואת מודלים" (consensus = median, spread, stddev בין 7 המודלים)
 
 ---
 
-## Architecture (collector_service)
+## ניבוי — Multi-Model
+
+7 מודלים מאומנים ב-`prediction_service/artifacts/moses/`:
+`lightgbm_v1`, `lightgbm_v2_log`, `lightgbm_tuned`, `lightgbm_knn`, `catboost_v1`, `stacked_v1`, `stacked_v2`.
+
+מודלים נטענים עצלים (LRU cache, default 8). רואים אותם דרך `/api/v1/predict/models`. החלפת champion ללא rebuild:
+
+```bash
+make champion MODEL=moses/stacked_v2
+```
+
+**API:**
+```bash
+# מודל בודד (defaults to champion)
+curl -X POST http://localhost:8000/api/v1/predict \
+  -H 'Content-Type: application/json' \
+  -d '{"features": {"area_sqm": 80, "rooms": 3, ...}}'
+
+# מודל ספציפי
+curl -X POST 'http://localhost:8000/api/v1/predict?model=moses/catboost_v1' ...
+
+# השוואת כל המודלים
+curl -X POST http://localhost:8000/api/v1/predict/compare \
+  -H 'Content-Type: application/json' \
+  -d '{"features": {...}}'
+```
+
+---
+
+## Strategy של clustering מפה
+
+| Zoom | אסטרטגיה | H3 res | גודל תא | תצוגה |
+|------|-----------|--------|---------|-------|
+| 0–8 | clusters | 5 | ~8.5km | תצוגת ארץ — hexagons גדולים |
+| 9–11 | clusters | 7 | ~1.2km | תצוגת עיר |
+| 12–13 | clusters | 8 | ~460m | תצוגת שכונה |
+| 14+ | points | — | — | נקודות בודדות, capped 2000 |
+
+האגרגציה כולה ב-Mongo (`$group` על שדה מאונדקס) — מילישניות גם על 279k רשומות.
+
+---
+
+## פיצ'רים ב-`features_enriched`
+
+~88 features המאוחדים מ-3 מקורות:
+
+- **תכונות נכס**: price, area_sqm, rooms, floor, building_floors, year_built, city, neighborhood, deal_nature, transaction_date, ...
+- **מקרו-כלכלי**: cpi_general, prime_rate, gdp_growth, unemployment, usd_ils, real_interest_rate, housing_cpi_gap, real_price, ...
+- **OSM מרחבי** (50+): מרחקים (water/beach/road/school/park/...), POI counts ברדיוסים, ratios של שימושי קרקע (green/commercial/industrial/residential), ...
+- **גיאו**: `geometry` (GeoJSON Point) + `h3_r5/r7/r8` לקלסטרינג
+
+מפורט ב-[docs/raw_records_mapping.json](docs/raw_records_mapping.json).
+
+---
+
+## Endpoints — סיכום
 
 ```
-collector_service/app/
-├── api/routes/       # health, collect, jobs, sources
-├── core/              # Config, logging, exceptions
-├── db/                # Mongo client, repositories
-├── models/            # Pydantic models
-├── scrapers/          # odata_il, madlan, cbs, govmap
-├── services/          # CollectionService, SourceRegistry
-└── main.py
+GET  /api/v1/map/data?bbox+zoom+filters         clusters או points
+GET  /api/v1/properties/search?...&page&size    חיפוש עם 9 filters
+GET  /api/v1/properties/autocomplete?q          ערים/שכונות/רחובות
+GET  /api/v1/properties/{id}                    פרטי נכס
+GET  /api/v1/properties/{id}/similar?radius     נכסים דומים בקרבת מקום
+
+GET  /api/v1/stats/summary                      KPIs
+GET  /api/v1/stats/timeseries?granularity       מחיר ממוצע לאורך זמן
+GET  /api/v1/stats/by-region?level&metric       top regions
+GET  /api/v1/stats/distribution?field&bins      histogram
+GET  /api/v1/stats/yoy-by-city                  ערים מתחממות
+GET  /api/v1/stats/source-breakdown             פילוח לפי מקור
+GET  /api/v1/stats/property-type-breakdown      פילוח לפי סוג נכס
+GET  /api/v1/stats/seasonality                  עסקאות לפי חודש
+
+GET  /api/v1/predict/models                     רשימת מודלים
+GET  /api/v1/predict/models/{owner}/{name}      metadata של מודל
+POST /api/v1/predict?model=...                  ניבוי
+POST /api/v1/predict/compare                    השוואת מודלים
 ```
+
+Swagger מלא: http://localhost:8000/docs
+
+---
+
+## Stack טכני
+
+| שכבה | טכנולוגיות |
+|------|------------|
+| Frontend | Next.js 16 · React 19 · TypeScript · Tailwind v4 · MapLibre GL · deck.gl 9 · TanStack Query · Zustand · Recharts |
+| Backend | FastAPI · Motor (async Mongo) · httpx · Pydantic v2 · h3 |
+| ML | LightGBM · CatBoost · XGBoost · scikit-learn · joblib |
+| Data | MongoDB 7 (2dsphere + text + h3 indices) · pandas · geopandas · shapely |
+| Infra | Docker · Docker Compose · Playwright |
+
+---
+
+## פיתוח לוקאלי בלי Docker
+
+```bash
+# Backend
+cd dashboard_service
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+MONGO_URI=mongodb+srv://... .venv/bin/uvicorn app.main:app --reload --port 8000
+
+# Frontend
+cd dashboard_app
+npm install
+NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
+
+# Prediction
+cd prediction_service
+.venv/bin/uvicorn serve:app --reload --port 8002
+```
+
+---
+
+## רישיון
+
+פרויקט אקדמי / מחקר.
