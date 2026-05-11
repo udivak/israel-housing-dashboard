@@ -114,6 +114,7 @@ class MapService:
                     city=d.get("city_name") or d.get("city"),
                     neighborhood=d.get("neighborhood"),
                     transaction_date=d.get("transaction_date"),
+                    coord_source=d.get("coord_source"),
                 )
             )
         return PointsResponse(

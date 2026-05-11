@@ -20,6 +20,8 @@ lib/
 !streamlit_app/lib/**
 !dashboard_app/lib/
 !dashboard_app/lib/**
+!pre_processing/lib/
+!pre_processing/lib/**
 lib64/
 parts/
 sdist/

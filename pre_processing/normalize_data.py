@@ -455,6 +455,7 @@ def normalize_nadlan_gov(doc: dict) -> dict:
         "street":          _str(p.get("address")),
         "lon":             lon,
         "lat":             lat,
+        "coord_source":    "parcel_centroid" if lon is not None and lat is not None else None,
     }
 
 def normalize_odata_il_nadlan(doc: dict) -> dict:
@@ -483,6 +484,7 @@ def normalize_odata_il_nadlan(doc: dict) -> dict:
         "street":          _str(p.get("display_address") or p.get("full_address")),
         "lon":             lon,
         "lat":             lat,
+        "coord_source":    "parcel_centroid" if lon is not None and lat is not None else None,
     }
 
 def normalize_tax_authority(doc: dict) -> dict:
@@ -512,6 +514,7 @@ def normalize_tax_authority(doc: dict) -> dict:
         "street":          full_street,
         "lon":             None,
         "lat":             None,
+        "coord_source":    None,
     }
 
 NORMALIZERS = {
@@ -566,9 +569,32 @@ def run():
             if row["price_per_sqm"] is None and row["price"] and row["area_sqm"]:
                 row["price_per_sqm"] = round(row["price"] / row["area_sqm"], 2)
 
+            # Preserve previously-geocoded address-level coords across re-runs:
+            # if the existing doc has coord_source == "address", keep its lat/lon
+            # rather than overwriting with the (coarser) parcel-centroid value.
+            row_other = {k: v for k, v in row.items() if k not in ("lat", "lon", "coord_source")}
             batch.append(UpdateOne(
                 {"source_id": row["source_id"]},
-                {"$set": row},
+                [
+                    {"$set": row_other},
+                    {"$set": {
+                        "lat": {"$cond": [
+                            {"$eq": [{"$ifNull": ["$coord_source", None]}, "address"]},
+                            "$lat",
+                            row["lat"],
+                        ]},
+                        "lon": {"$cond": [
+                            {"$eq": [{"$ifNull": ["$coord_source", None]}, "address"]},
+                            "$lon",
+                            row["lon"],
+                        ]},
+                        "coord_source": {"$cond": [
+                            {"$eq": [{"$ifNull": ["$coord_source", None]}, "address"]},
+                            "$coord_source",
+                            row["coord_source"],
+                        ]},
+                    }},
+                ],
                 upsert=True
             ))
             count += 1

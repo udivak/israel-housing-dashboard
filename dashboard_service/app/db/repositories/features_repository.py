@@ -123,6 +123,7 @@ class FeaturesRepository:
             "city_name": 1,
             "neighborhood": 1,
             "transaction_date": 1,
+            "coord_source": 1,
         }
         cursor = self._coll.find(match, projection).limit(limit)
         return await cursor.to_list(length=limit)
