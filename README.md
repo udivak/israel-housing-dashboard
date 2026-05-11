@@ -125,6 +125,8 @@ make health                # בדיקת בריאות לכל השירותים
 make models                # רשימת מודלים זמינים ל-prediction
 make champion MODEL=moses/stacked_v2   # החלפת champion (ללא rebuild)
 make preprocess            # batch ETL
+make geocode               # שדרוג קואורדינטות הנכסים לרמת כתובת (Govmap) — ארוך
+make geocode-dry           # תצוגה מקדימה (50 רשומות, ללא כתיבה)
 make streamlit             # QA tool
 make clean                 # עצירה + מחיקת volumes (מוחק נתונים)
 ```
@@ -255,6 +257,26 @@ make champion MODEL=udi/nn_v4
 ### למה ה-artifacts לא ב-git כברירת מחדל
 
 `prediction_service/.gitignore` חוסם `artifacts/` ו-`*.joblib` כי קבצי מודל הם binary blobs (5MB-500MB+), משתנים בכל אימון, ומנפחים את ה-history. זה תקני בפרויקטי ML. הפתרון הנכון לטווח ארוך הוא **Git LFS** (אופציה ג') או **registry** (MLflow / S3 / DVC).
+
+---
+
+## גיאוקודינג ברמת כתובת (Govmap)
+
+ב-`normalized_records` השדות `lat`/`lon` מגיעים כברירת מחדל מ-**parcel centroid** של גוש-חלקה ([get_geom_by_block.py](pre_processing/pipelines/get_geom_by_block.py)) — דיוק של ~100–300 מטר, וכל הדירות באותו גוש נופלות על נקודה אחת על המפה. ה-pipeline `geocode_addresses.py` משדרג את הקואורדינטות לרמת **בניין** מול Govmap, מסמן `coord_source="address"`, ומשמר את התוצאות ב-collection `geocode_cache`.
+
+```bash
+make geocode-dry           # 50 רשומות, ללא כתיבה — לוודא הגדרות
+make geocode               # ריצה מלאה
+.venv/bin/python pre_processing/pipelines/geocode_addresses.py --limit 1000   # batch קטן
+```
+
+**מאפיינים:**
+- **Idempotent + resumable** — ה-query מסנן `coord_source != "address"`, אז אפשר לעצור (`kill PID`) ולהמשיך מאוחר יותר בלי לאבד עבודה.
+- **Cache לפי `street+city`** — ~63K כתובות ייחודיות מכסות ~295K רשומות (יחס ~4.6×). אחרי שכתובת נכנסה ל-`geocode_cache`, רשומות עתידיות עם אותה כתובת לא קוראות שוב ל-Govmap.
+- **ארוך** — הסקריפט סדרתי עם `polite_sleep=0.3s` בין קריאות Govmap. בקצב ~2 it/s זה **~9 שעות** לפעם הראשונה (אומדן הגג של tqdm ~42h מטעה — הוא לא מביא בחשבון את ה-cache). מומלץ להריץ ברקע: `nohup .venv/bin/python pre_processing/pipelines/geocode_addresses.py > geocode.log 2>&1 &`
+- **Atlas storage** — דורש מקום ב-cluster של `MONGODB_NORMALIZED_URI`. אם ה-cluster מלא, אפשר לפנות מקום במחיקת ה-DB `sample_mflix` של Atlas (demo dataset, לא בשימוש) דרך Data Explorer.
+- **שדות מתעדכנים** — `lat`, `lon`, `coord_source="address"`, `coord_label`, `coord_updated_at`. `normalize_data.py` משתמש ב-aggregation-pipeline `$cond` כדי לא לדרוס קואורדינטות ברמת כתובת בריצות נורמליזציה הבאות.
+- **Frontend** — [DeckOverlay.tsx](dashboard_app/components/map/DeckOverlay.tsx) משתמש ב-`coord_source` כדי לשנות רדיוס ו-opacity: `address` = מלא וחד, `parcel_centroid` = קטן ודהוי.
 
 ---
 

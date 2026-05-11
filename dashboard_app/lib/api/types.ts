@@ -60,6 +60,7 @@ export interface PointFeature {
   neighborhood?: string | null;
   street?: string | null;
   transaction_date?: string | null;
+  coord_source?: string | null;
 }
 
 export interface PointsResponse {

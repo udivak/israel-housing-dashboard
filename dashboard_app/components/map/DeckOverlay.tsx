@@ -47,6 +47,7 @@ function toGeoJSON(data: MapDataResponse | undefined) {
           neighborhood: p.neighborhood ?? "",
           street: p.street ?? "",
           transaction_date: p.transaction_date ?? "",
+          coord_source: p.coord_source ?? "unknown",
         },
       });
     }
@@ -71,12 +72,14 @@ export function DeckOverlay({ map, data, onPointClick }: DeckOverlayProps) {
           type: "circle",
           source: SOURCE_ID,
           paint: {
-            // Radius scales with count for clusters (using sqrt) and is fixed for points
+            // Cluster radius scales with count; point radius reflects coord accuracy.
             "circle-radius": [
               "case",
               ["==", ["get", "kind"], "cluster"],
               ["max", 8, ["min", 40, ["sqrt", ["get", "count"]]]],
-              5,
+              ["==", ["get", "coord_source"], "address"], 6,
+              ["==", ["get", "coord_source"], "parcel_centroid"], 4,
+              3,
             ],
             // Color scales with price/m² along a red->blue gradient
             "circle-color": [
@@ -89,7 +92,13 @@ export function DeckOverlay({ map, data, onPointClick }: DeckOverlayProps) {
               40000, "#f08c69",
               80000, "#b22834",
             ],
-            "circle-opacity": 0.8,
+            "circle-opacity": [
+              "case",
+              ["==", ["get", "kind"], "cluster"], 0.8,
+              ["==", ["get", "coord_source"], "address"], 0.9,
+              ["==", ["get", "coord_source"], "parcel_centroid"], 0.55,
+              0.35,
+            ],
             "circle-stroke-color": "#ffffff",
             "circle-stroke-width": 1,
             "circle-stroke-opacity": 0.4,
@@ -118,6 +127,7 @@ export function DeckOverlay({ map, data, onPointClick }: DeckOverlayProps) {
           neighborhood: String(props.neighborhood || "") || null,
           street: String(props.street || "") || null,
           transaction_date: String(props.transaction_date || "") || null,
+          coord_source: typeof props.coord_source === "string" ? props.coord_source : null,
         });
       } else if (props.kind === "cluster") {
         // Zoom in on cluster click

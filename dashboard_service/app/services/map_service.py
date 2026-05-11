@@ -115,6 +115,7 @@ class MapService:
                     neighborhood=d.get("neighborhood"),
                     street=d.get("street"),
                     transaction_date=d.get("transaction_date"),
+                    coord_source=d.get("coord_source"),
                 )
             )
         return PointsResponse(

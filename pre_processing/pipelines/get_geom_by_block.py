@@ -126,7 +126,7 @@ def extract_parcel_key(doc):
 # query records
 # -----------------------------
 
-query = {"geometry": {"$exists": False}}
+query = {"geometry": {"$exists": False}, "coord_source": {"$ne": "address"}}
 
 projection = {
     "raw_payload.block": 1,

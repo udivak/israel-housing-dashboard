@@ -52,6 +52,7 @@ class PointFeature(BaseModel):
     neighborhood: str | None = None
     street: str | None = None
     transaction_date: datetime | None = None
+    coord_source: str | None = None
 
 
 class PointsResponse(BaseModel):
