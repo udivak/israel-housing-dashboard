@@ -1,5 +1,11 @@
 const PHOTON_API = "https://photon.komoot.io/api";
 
+// Israel bounding box — keeps results within the country.
+const ISRAEL_BBOX = "34.2,29.5,35.9,33.3"; // lon1,lat1,lon2,lat2
+// Centroid of Israel's populated area (used as location bias).
+const ISRAEL_LAT = 31.7;
+const ISRAEL_LON = 34.9;
+
 export interface PhotonFeature {
   type: "Feature";
   geometry: { type: "Point"; coordinates: [number, number] };
@@ -33,11 +39,12 @@ export async function searchPlaces(
   const params = new URLSearchParams({
     q: query.trim(),
     limit: String(options?.limit ?? 8),
+    lang: "he",
+    bbox: ISRAEL_BBOX,
+    // Location bias defaults to centre of Israel; caller can override.
+    lat: String(options?.lat ?? ISRAEL_LAT),
+    lon: String(options?.lon ?? ISRAEL_LON),
   });
-  if (options?.lat != null && options?.lon != null) {
-    params.set("lat", String(options.lat));
-    params.set("lon", String(options.lon));
-  }
 
   const res = await fetch(`${PHOTON_API}/?${params}`);
   if (!res.ok) throw new Error("Geocoding failed");

@@ -144,8 +144,34 @@ def _predict_one(model_id: str, features: dict[str, Any]) -> float:
             if col not in df.columns:
                 df[col] = None
         df = df[feature_names]
-    y = model.predict(df)
-    return float(y[0])
+
+    # Restore pandas categorical dtypes that LightGBM stores in the booster.
+    # Without this, object-dtype columns trigger "categorical_feature do not match".
+    booster = getattr(model, "booster_", None)
+    if booster is not None:
+        pandas_cats = booster.dump_model().get("pandas_categorical", [])
+        cat_iter = iter(pandas_cats)
+        for col in df.columns:
+            if df[col].dtype == object:
+                try:
+                    df[col] = pd.Categorical(df[col], categories=next(cat_iter))
+                except StopIteration:
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # Coerce any remaining object columns (missing numerics filled as None) to float.
+    for col in df.select_dtypes("object").columns:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    raw = float(model.predict(df)[0])
+
+    # Some models predict raw price in ILS rather than log-price.
+    # Normalise to log-price so the API contract is consistent.
+    # Log of realistic Israeli apartment prices (1M-10M ILS) is 13.8-16.1; raw
+    # prices are always > 100, so this threshold cleanly separates the two cases.
+    if raw > 100:
+        raw = math.log(raw)
+
+    return raw
 
 
 # ---------------------------------------------------------------------------
