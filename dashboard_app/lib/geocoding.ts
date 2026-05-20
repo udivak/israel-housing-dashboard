@@ -39,7 +39,7 @@ export async function searchPlaces(
   const params = new URLSearchParams({
     q: query.trim(),
     limit: String(options?.limit ?? 8),
-    lang: "he",
+    lang: "default",
     bbox: ISRAEL_BBOX,
     // Location bias defaults to centre of Israel; caller can override.
     lat: String(options?.lat ?? ISRAEL_LAT),
