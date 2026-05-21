@@ -32,8 +32,17 @@ DST_COL     = DST_DB[os.getenv("MONGODB_NORMALIZED_COLLECTION", "normalized_reco
 BATCH_SIZE  = 1000
 
 # ================================================================
+# Reverse-geocoding לפי קואורדינטות (מחליף את SETTLEMENT_ID_TO_NAME שבור).
+# המיפוי החדש ב-pre_processing/geo_utils.py — נטול תלות ב-Mongo/env.
+# ================================================================
+from geo_utils import reverse_geocode_city  # noqa: E402
+
+# ================================================================
 # SETTLEMENT ID → CITY NAME LOOKUP
-# מקור: הלשכה המרכזית לסטטיסטיקה — רשימת ישובים
+# ⚠️ DEPRECATED — הטבלה הזו אינה תואמת את הקודים הרשמיים של הלמ"ס.
+# כל ה-IDs של ערים גדולות (תל אביב=5000, אשקלון=7100 וכו') מוצבים לערכים
+# שגויים, מה שגרם ל-51,202 רשומות nadlan_gov להיות מתויגות בעיר שגויה.
+# נשמרת רק כ-fallback אחרון; השתמש ב-reverse_geocode_city() במקום.
 # ================================================================
 SETTLEMENT_ID_TO_NAME = {
     70: "אור יהודה", 90: "אור עקיבא", 1020: "אבו גוש", 1029: "אבו סנאן",
@@ -435,6 +444,9 @@ def normalize_nadlan_gov(doc: dict) -> dict:
     p   = doc.get("raw_payload", {})
     lon, lat = _coords(doc.get("geometry"))
     sid = _int(p.get("settlmentID"))
+    # SETTLEMENT_ID_TO_NAME מתיג ערים שגויות (ראה הערה למעלה); נסה
+    # reverse-geocode על הקואורדינטות לפני שמשתמשים ב-lookup.
+    city_name = reverse_geocode_city(lat, lon) or SETTLEMENT_ID_TO_NAME.get(sid)
     return {
         "source":          "nadlan_gov",
         "source_id":       str(doc["_id"]),
@@ -449,7 +461,7 @@ def normalize_nadlan_gov(doc: dict) -> dict:
         "deal_nature":     _str(p.get("dealNature")),
         "project_name":    None,
         "is_new_project":  0,
-        "city_name":       SETTLEMENT_ID_TO_NAME.get(sid),
+        "city_name":       city_name,
         "city_id":         sid,
         "neighborhood":    None,
         "street":          _str(p.get("address")),

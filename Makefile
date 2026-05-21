@@ -65,6 +65,14 @@ geocode-dry:                   ## תצוגה מקדימה של geocoding ללא 
 	@if [ ! -d .venv ]; then python3 -m venv .venv && .venv/bin/pip install -r pre_processing/requirements.txt; fi
 	.venv/bin/python pre_processing/pipelines/geocode_addresses.py --dry-run --limit 50
 
+fix-cities:                    ## תיקון city_name של nadlan_gov ע"י reverse-geocode (לפי קואורדינטות)
+	@if [ ! -d .venv ]; then python3 -m venv .venv && .venv/bin/pip install -r pre_processing/requirements.txt; fi
+	.venv/bin/python pre_processing/pipelines/fix_city_names.py $(ARGS)
+
+fix-cities-dry:                ## תצוגה מקדימה של תיקון השמות (30 רשומות, ללא כתיבה)
+	@if [ ! -d .venv ]; then python3 -m venv .venv && .venv/bin/pip install -r pre_processing/requirements.txt; fi
+	.venv/bin/python pre_processing/pipelines/fix_city_names.py --dry-run
+
 streamlit:                     ## הרצת streamlit_app (QA)
 	docker compose --profile qa up --build streamlit_app
 
