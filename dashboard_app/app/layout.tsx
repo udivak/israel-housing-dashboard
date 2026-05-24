@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/components/providers/QueryProvider";
-import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 
 const geistSans = Geist({
@@ -16,8 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Israel Housing Dashboard",
-  description: "AI-powered real estate intelligence platform",
+  title: "Israel Housing — modeled, mapped, priced",
+  description:
+    "AI-powered intelligence platform for the Israeli real-estate market: live listings, seven models, interactive maps.",
 };
 
 export default function RootLayout({
@@ -26,16 +26,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" dir="ltr" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-zinc-950 font-sans antialiased text-white`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-[--bg] font-sans text-[--fg] antialiased`}
       >
         <QueryProvider>
-          <Sidebar />
-          <div className="pl-64">
-            <Header />
-            <main className="p-8">{children}</main>
-          </div>
+          <Header />
+          <main className="mx-auto max-w-7xl">{children}</main>
         </QueryProvider>
       </body>
     </html>

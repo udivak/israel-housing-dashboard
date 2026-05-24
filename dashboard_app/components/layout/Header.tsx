@@ -1,33 +1,67 @@
 "use client";
 
-import { Bell } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { SearchBar } from "@/components/map/SearchBar";
+import { LocaleToggle } from "./LocaleToggle";
+import { cn } from "@/lib/utils";
+
+const NAV = [
+  { href: "/", label: "Home" },
+  { href: "/map", label: "Map" },
+  { href: "/stats", label: "Stats" },
+  { href: "/ai", label: "Predict" },
+  { href: "/settings", label: "Settings" },
+];
 
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname() ?? "/";
 
   const handleSelect = (lon: number, lat: number, zoom = 15) => {
     router.push(`/map?lon=${lon}&lat=${lat}&zoom=${zoom}`);
   };
 
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
+
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-zinc-950/80 backdrop-blur-xl px-8">
-      <div className="flex items-center gap-4">
-        <SearchBar
-          onSelect={handleSelect}
-          placeholder="Search address, street, city..."
-          className="w-80"
-          inputClassName="rounded-lg bg-white/5 py-2 focus:ring-1 focus:ring-cyan-500/30"
-        />
-      </div>
-      <div className="flex items-center gap-4">
-        <button className="relative rounded-lg p-2 text-zinc-400 hover:bg-white/5 hover:text-white transition-colors">
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-cyan-500" />
-        </button>
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-600 text-sm font-medium text-white">
-          U
+    <header className="sticky top-0 z-40 border-b border-[--border] bg-[--bg]/70 backdrop-blur-xl">
+      <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-6">
+        <Link href="/" className="flex shrink-0 items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[image:linear-gradient(135deg,var(--accent-1),var(--accent-2))]">
+            <span className="text-xs font-bold text-[--bg]">IH</span>
+          </div>
+          <span className="hidden text-sm font-semibold tracking-tight text-[--fg] sm:inline">
+            Israel Housing
+          </span>
+        </Link>
+
+        <nav className="hidden items-center gap-1 md:flex">
+          {NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                isActive(item.href)
+                  ? "bg-[--accent-1]/10 text-[--accent-1]"
+                  : "text-[--fg-muted] hover:bg-[--bg-elev] hover:text-[--fg]",
+              )}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="ml-auto flex items-center gap-3">
+          <SearchBar
+            onSelect={handleSelect}
+            placeholder="Search address, street, city…"
+            className="hidden w-64 sm:block lg:w-80"
+            inputClassName="rounded-md border-[--border] bg-[--bg-elev] py-1.5 text-sm focus:border-[--accent-1]/50 focus:ring-1 focus:ring-[--accent-1]/30"
+          />
+          <LocaleToggle />
         </div>
       </div>
     </header>

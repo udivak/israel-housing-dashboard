@@ -12,13 +12,14 @@ import {
 } from "recharts";
 import { useDistribution } from "@/hooks/useStats";
 import { ChartCard, fmtNum } from "./ChartCard";
+import { CHART_COLORS, axisProps, gridProps, tooltipStyle } from "@/lib/chart-theme";
 
 const FIELDS = [
   { value: "price" as const, label: "Price" },
   { value: "price_per_sqm" as const, label: "₪/m²" },
   { value: "rooms" as const, label: "Rooms" },
   { value: "area_sqm" as const, label: "Area" },
-  { value: "year_built" as const, label: "Year Built" },
+  { value: "year_built" as const, label: "Year built" },
 ];
 
 type Field = (typeof FIELDS)[number]["value"];
@@ -33,14 +34,16 @@ export function DistributionChart({ city }: { city?: string }) {
   }));
 
   return (
-    <ChartCard title="Distribution" subtitle={city ?? "Country"} className="h-80">
+    <ChartCard title="Distribution" subtitle={city ?? "Country-wide"} className="h-80">
       <div className="mb-2 flex flex-wrap gap-1">
         {FIELDS.map((f) => (
           <button
             key={f.value}
             onClick={() => setField(f.value)}
-            className={`rounded-md px-2 py-1 text-xs ${
-              field === f.value ? "bg-cyan-500/20 text-cyan-300" : "text-zinc-400 hover:bg-white/5"
+            className={`rounded-md px-2 py-1 text-xs transition-colors ${
+              field === f.value
+                ? "bg-[--accent-1]/15 text-[--accent-1]"
+                : "text-[--fg-muted] hover:bg-[--bg-elev-2]"
             }`}
           >
             {f.label}
@@ -48,18 +51,18 @@ export function DistributionChart({ city }: { city?: string }) {
         ))}
       </div>
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center text-xs text-zinc-500">Loading…</div>
+        <div className="flex h-48 items-center justify-center text-xs text-[--fg-dim]">Loading…</div>
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-            <CartesianGrid stroke="#3f3f46" strokeDasharray="3 3" />
-            <XAxis dataKey="label" stroke="#71717a" fontSize={9} interval="preserveStartEnd" />
-            <YAxis stroke="#71717a" fontSize={11} />
+            <CartesianGrid {...gridProps} />
+            <XAxis dataKey="label" {...axisProps} interval="preserveStartEnd" />
+            <YAxis {...axisProps} />
             <Tooltip
-              contentStyle={{ backgroundColor: "#18181b", border: "1px solid #3f3f46", color: "#fff" }}
+              contentStyle={tooltipStyle}
               formatter={(value: number) => [fmtNum(value), "Transactions"]}
             />
-            <Bar dataKey="count" fill="#a78bfa" radius={[2, 2, 0, 0]} />
+            <Bar dataKey="count" fill={CHART_COLORS.accent2} radius={[2, 2, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       )}
