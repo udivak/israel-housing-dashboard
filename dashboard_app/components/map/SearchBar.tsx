@@ -9,12 +9,14 @@ interface SearchBarProps {
   onSelect: (lon: number, lat: number, zoom?: number) => void;
   placeholder?: string;
   className?: string;
+  inputClassName?: string;
 }
 
 export function SearchBar({
   onSelect,
   placeholder = "Search street, city, address...",
   className = "",
+  inputClassName = "",
 }: SearchBarProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PhotonFeature[]>([]);
@@ -100,7 +102,10 @@ export function SearchBar({
           onFocus={() => results.length > 0 && setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="w-full rounded-xl border border-white/10 bg-zinc-900/90 py-3 pl-10 pr-10 text-sm text-white placeholder-zinc-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+          className={cn(
+            "w-full rounded-xl border border-white/10 bg-zinc-900/90 py-3 pl-10 pr-10 text-sm text-white placeholder-zinc-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20",
+            inputClassName,
+          )}
         />
         {isLoading && (
           <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-cyan-400" />

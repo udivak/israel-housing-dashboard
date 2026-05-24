@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { DeckOverlay } from "./DeckOverlay";
@@ -23,6 +24,7 @@ export function LiveMap() {
 
   const setViewport = useFiltersStore((s) => s.setViewport);
   const filters = useFiltersStore((s) => s.filters);
+  const searchParams = useSearchParams();
 
   const debouncedBBox = useDebounce(bbox, 300);
   const debouncedZoom = useDebounce(zoom, 300);
@@ -108,6 +110,25 @@ export function LiveMap() {
   const handleSearchSelect = useCallback((lon: number, lat: number, z = 14) => {
     mapRef.current?.flyTo({ center: [lon, lat], zoom: z, duration: 1200 });
   }, []);
+
+  useEffect(() => {
+    const lonStr = searchParams.get("lon");
+    const latStr = searchParams.get("lat");
+    if (!lonStr || !latStr) return;
+    const lon = Number(lonStr);
+    const lat = Number(latStr);
+    const zoom = Number(searchParams.get("zoom")) || 15;
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
+
+    const m = mapRef.current;
+    if (!m) return;
+    const fly = () => m.flyTo({ center: [lon, lat], zoom, duration: 1200 });
+    if (m.loaded()) {
+      fly();
+    } else {
+      m.once("load", fly);
+    }
+  }, [searchParams]);
 
   return (
     <div className="relative h-full min-h-[500px] w-full overflow-hidden rounded-xl border border-white/10">
