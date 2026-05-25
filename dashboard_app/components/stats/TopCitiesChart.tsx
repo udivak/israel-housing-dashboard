@@ -29,8 +29,8 @@ export function TopCitiesChart() {
           onClick={() => setLevel("city")}
           className={`rounded-md px-2 py-1 text-xs transition-colors ${
             level === "city"
-              ? "bg-[--accent-1]/15 text-[--accent-1]"
-              : "text-[--fg-muted] hover:bg-[--bg-elev-2]"
+              ? "bg-[var(--accent-1)]/15 text-[var(--accent-1)]"
+              : "text-[var(--fg-muted)] hover:bg-[var(--bg-elev-2)]"
           }`}
         >
           Cities
@@ -39,15 +39,15 @@ export function TopCitiesChart() {
           onClick={() => setLevel("neighborhood")}
           className={`rounded-md px-2 py-1 text-xs transition-colors ${
             level === "neighborhood"
-              ? "bg-[--accent-1]/15 text-[--accent-1]"
-              : "text-[--fg-muted] hover:bg-[--bg-elev-2]"
+              ? "bg-[var(--accent-1)]/15 text-[var(--accent-1)]"
+              : "text-[var(--fg-muted)] hover:bg-[var(--bg-elev-2)]"
           }`}
         >
           Neighborhoods
         </button>
       </div>
       {isLoading ? (
-        <div className="flex h-64 items-center justify-center text-xs text-[--fg-dim]">Loading…</div>
+        <div className="flex h-64 items-center justify-center text-xs text-[var(--fg-dim)]">Loading…</div>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data} layout="vertical" margin={{ top: 5, right: 10, left: 80, bottom: 5 }}>

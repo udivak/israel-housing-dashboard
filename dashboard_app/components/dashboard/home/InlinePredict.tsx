@@ -70,9 +70,9 @@ export function InlinePredict() {
     <Section
       title="Predict an apartment in 10 seconds"
       subtitle="Try a real address. The model returns an estimate with a confidence range."
-      className="border-b border-[--border] px-6 py-12"
+      className="border-b border-[var(--border)] px-6 py-12"
     >
-      <div id="predict" className="rounded-xl border border-[--border] bg-[--bg-elev] p-5">
+      <div id="predict" className="rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] p-5">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -81,14 +81,14 @@ export function InlinePredict() {
           className="grid gap-3 sm:grid-cols-[2fr_repeat(3,1fr)_auto]"
         >
           <label className="flex flex-col gap-1 text-xs">
-            <span className="text-[--fg-dim]">Address</span>
-            <div className="flex items-center gap-2 rounded-md border border-[--border] bg-[--bg] px-2.5 py-1.5 focus-within:border-[--accent-1]/50">
-              <MapPin className="h-3.5 w-3.5 text-[--fg-dim]" />
+            <span className="text-[var(--fg-dim)]">Address</span>
+            <div className="flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 focus-within:border-[var(--accent-1)]/50">
+              <MapPin className="h-3.5 w-3.5 text-[var(--fg-dim)]" />
               <input
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder={EXAMPLE}
-                className="flex-1 bg-transparent text-sm text-[--fg] placeholder:text-[--fg-dim] focus:outline-none"
+                className="flex-1 bg-transparent text-sm text-[var(--fg)] placeholder:text-[var(--fg-dim)] focus:outline-none"
               />
             </div>
           </label>
@@ -99,7 +99,7 @@ export function InlinePredict() {
             <button
               type="submit"
               disabled={predict.isPending}
-              className="flex items-center justify-center gap-2 rounded-md bg-[--accent-1] px-4 py-2 text-sm font-semibold text-[--bg] hover:opacity-90 disabled:opacity-60"
+              className="flex items-center justify-center gap-2 rounded-md bg-[var(--accent-1)] px-4 py-2 text-sm font-semibold text-[var(--bg)] hover:opacity-90 disabled:opacity-60"
             >
               {predict.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -116,7 +116,7 @@ export function InlinePredict() {
             <button
               type="button"
               onClick={() => setAddress(EXAMPLE)}
-              className="rounded-full border border-[--border] bg-[--bg] px-3 py-1 text-[--fg-muted] hover:border-[--border-strong]"
+              className="rounded-full border border-[var(--border)] bg-[var(--bg)] px-3 py-1 text-[var(--fg-muted)] hover:border-[var(--border-strong)]"
             >
               Try: {EXAMPLE}
             </button>
@@ -125,21 +125,21 @@ export function InlinePredict() {
         </div>
 
         {predict.data && (
-          <div className="mt-5 rounded-lg border border-[--accent-1]/30 bg-[image:linear-gradient(135deg,var(--accent-1)/0.06,var(--accent-2)/0.06)] p-5">
-            <div className="text-xs uppercase tracking-wide text-[--fg-dim]">
+          <div className="mt-5 rounded-lg border border-[var(--accent-1)]/30 bg-[var(--bg-elev)] p-5">
+            <div className="text-xs uppercase tracking-wide text-[var(--fg-dim)]">
               Predicted price · {modelDisplayName(predict.data.model)}
             </div>
             <div className="tabular mt-1 text-4xl font-semibold">
               <GradientText>{formatCurrency(predict.data.predicted_price)}</GradientText>
             </div>
-            <div className="mt-1 text-xs text-[--fg-muted]">
+            <div className="mt-1 text-xs text-[var(--fg-muted)]">
               log-price {predict.data.predicted_log_price.toFixed(3)} · features auto-derived from your inputs
             </div>
           </div>
         )}
 
         {predict.isError && !geoError && (
-          <div className="mt-4 rounded-md border border-[--down]/30 bg-[--down]/10 p-3 text-xs text-[--down]">
+          <div className="mt-4 rounded-md border border-[var(--down)]/30 bg-[var(--down)]/10 p-3 text-xs text-[var(--down)]">
             Prediction failed. Verify the prediction_service is running and a champion model is set.
           </div>
         )}
@@ -161,13 +161,13 @@ function NumField({
 }) {
   return (
     <label className="flex flex-col gap-1 text-xs">
-      <span className="text-[--fg-dim]">{label}</span>
+      <span className="text-[var(--fg-dim)]">{label}</span>
       <input
         type="number"
         value={value}
         step={step}
         onChange={(e) => onChange(e.target.value)}
-        className="tabular rounded-md border border-[--border] bg-[--bg] px-2.5 py-1.5 text-sm text-[--fg] focus:border-[--accent-1]/50 focus:outline-none"
+        className="tabular rounded-md border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--fg)] focus:border-[var(--accent-1)]/50 focus:outline-none"
       />
     </label>
   );

@@ -16,8 +16,8 @@ const PROPERTY_TYPES = [
 
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-2 border-t border-[--border] pt-4 first:border-t-0 first:pt-0">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-[--fg-dim]">
+    <div className="flex flex-col gap-2 border-t border-[var(--border)] pt-4 first:border-t-0 first:pt-0">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--fg-dim)]">
         {label}
       </div>
       {children}
@@ -28,14 +28,14 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1 text-xs">
-      <span className="text-[--fg-muted]">{label}</span>
+      <span className="text-[var(--fg-muted)]">{label}</span>
       {children}
     </label>
   );
 }
 
 const inputCls =
-  "w-full rounded-md border border-[--border] bg-[--bg] px-2.5 py-1.5 text-sm text-[--fg] placeholder:text-[--fg-dim] focus:border-[--accent-1]/50 focus:outline-none";
+  "w-full rounded-md border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--fg)] placeholder:text-[var(--fg-dim)] focus:border-[var(--accent-1)]/50 focus:outline-none";
 
 const ACTIVE_LABELS: Partial<Record<keyof MapFilters, (v: unknown) => string>> = {
   city: (v) => `City: ${v}`,
@@ -61,16 +61,16 @@ export function FilterSidebar() {
     .filter(([, v]) => v !== undefined && v !== null && v !== "");
 
   return (
-    <aside className="flex h-full w-72 shrink-0 flex-col gap-5 overflow-y-auto rounded-xl border border-[--border] bg-[--bg-elev] p-4">
+    <aside className="flex h-full w-72 shrink-0 flex-col gap-5 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] p-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-semibold text-[--fg]">
-          <Filter className="h-4 w-4 text-[--accent-1]" />
+        <div className="flex items-center gap-2 text-sm font-semibold text-[var(--fg)]">
+          <Filter className="h-4 w-4 text-[var(--accent-1)]" />
           Filters
         </div>
         <button
           onClick={reset}
           disabled={!active.length}
-          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[--fg-muted] hover:bg-[--bg-elev-2] hover:text-[--fg] disabled:opacity-40"
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--fg-muted)] hover:bg-[var(--bg-elev-2)] hover:text-[var(--fg)] disabled:opacity-40"
         >
           <X className="h-3 w-3" />
           Reset
@@ -85,7 +85,7 @@ export function FilterSidebar() {
               <button
                 type="button"
                 onClick={() => setFilters({ [k]: undefined } as Partial<MapFilters>)}
-                className="rounded-full p-0.5 hover:bg-[--accent-1]/20"
+                className="rounded-full p-0.5 hover:bg-[var(--accent-1)]/20"
                 aria-label={`Clear ${k}`}
               >
                 <X className="h-2.5 w-2.5" />

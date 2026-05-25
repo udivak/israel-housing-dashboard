@@ -32,21 +32,21 @@ export function Section({
       >
         <div className="min-w-0">
           {eyebrow && (
-            <div className="mb-1 text-xs uppercase tracking-[0.18em] text-[--fg-dim]">
+            <div className="mb-1 text-xs uppercase tracking-[0.18em] text-[var(--fg-dim)]">
               {eyebrow}
             </div>
           )}
-          <h2 className="text-xl font-semibold tracking-tight text-[--fg] sm:text-2xl">
+          <h2 className="text-xl font-semibold tracking-tight text-[var(--fg)] sm:text-2xl">
             {title}
           </h2>
           {subtitle && (
-            <p className="mt-1 max-w-2xl text-sm text-[--fg-muted]">{subtitle}</p>
+            <p className="mt-1 max-w-2xl text-sm text-[var(--fg-muted)]">{subtitle}</p>
           )}
         </div>
         {rightLink && (
           <Link
             href={rightLink.href}
-            className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-[--accent-1] hover:text-[--accent-2]"
+            className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-[var(--accent-1)] hover:text-[var(--accent-2)]"
           >
             {rightLink.label}
             <ArrowRight className="h-3.5 w-3.5 rtl-flip" />

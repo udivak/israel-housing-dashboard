@@ -30,8 +30,8 @@ function SectionCard({
   return (
     <Card>
       <div className="mb-3 flex items-center gap-2">
-        <Icon className="h-4 w-4 text-[--accent-1]" />
-        <h3 className="text-sm font-semibold text-[--fg]">{title}</h3>
+        <Icon className="h-4 w-4 text-[var(--accent-1)]" />
+        <h3 className="text-sm font-semibold text-[var(--fg)]">{title}</h3>
       </div>
       {children}
     </Card>
@@ -66,36 +66,36 @@ export function SettingsClient() {
         <div className="grid gap-4 lg:grid-cols-2">
           <SectionCard title="System health" icon={Activity}>
             <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between rounded-md border border-[--border] bg-[--bg] px-3 py-2">
-                <div className="flex items-center gap-2 text-[--fg]">
+              <div className="flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2">
+                <div className="flex items-center gap-2 text-[var(--fg)]">
                   <Pill tone={ok ? "up" : "down"}>{ok ? "online" : "down"}</Pill>
                   dashboard_service
                 </div>
-                <span className="text-[--fg-dim]">
+                <span className="text-[var(--fg-dim)]">
                   {health.isLoading ? "checking…" : health.data?.status ?? "DOWN"}
                 </span>
               </div>
-              <div className="flex items-center justify-between rounded-md border border-[--border] bg-[--bg] px-3 py-2">
-                <span className="text-[--fg-muted]">API base URL</span>
-                <code className="text-[--fg]">{apiUrl}</code>
+              <div className="flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2">
+                <span className="text-[var(--fg-muted)]">API base URL</span>
+                <code className="text-[var(--fg)]">{apiUrl}</code>
               </div>
               <a
                 href={`${apiUrl}/docs`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-between rounded-md border border-[--border] bg-[--bg] px-3 py-2 hover:border-[--border-strong]"
+                className="flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2 hover:border-[var(--border-strong)]"
               >
-                <span className="text-[--fg-muted]">Swagger / API docs</span>
-                <ExternalLink className="h-3.5 w-3.5 text-[--fg-dim]" />
+                <span className="text-[var(--fg-muted)]">Swagger / API docs</span>
+                <ExternalLink className="h-3.5 w-3.5 text-[var(--fg-dim)]" />
               </a>
             </div>
           </SectionCard>
 
           <SectionCard title="Models" icon={Brain}>
-            <div className="text-xs text-[--fg-muted]">
+            <div className="text-xs text-[var(--fg-muted)]">
               {models.length} trained models available. Switching the champion requires:
             </div>
-            <pre className="tabular mt-2 overflow-x-auto rounded-md border border-[--border] bg-[--bg] p-2 text-[11px] text-[--fg]">
+            <pre className="tabular mt-2 overflow-x-auto rounded-md border border-[var(--border)] bg-[var(--bg)] p-2 text-[11px] text-[var(--fg)]">
 {`make champion MODEL=moses/stacked_v2
 # or via .env: CHAMPION_MODEL=moses/stacked_v2`}
             </pre>
@@ -110,16 +110,16 @@ export function SettingsClient() {
 
           <SectionCard title="Data sources · freshness" icon={Database}>
             {sources.length === 0 ? (
-              <div className="text-xs text-[--fg-dim]">No data yet</div>
+              <div className="text-xs text-[var(--fg-dim)]">No data yet</div>
             ) : (
               <div className="space-y-1 text-xs">
                 {sources.map((s) => (
                   <div
                     key={s.source}
-                    className="flex items-center justify-between rounded-md border border-[--border] bg-[--bg] px-3 py-2"
+                    className="flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2"
                   >
-                    <span className="text-[--fg]">{s.source}</span>
-                    <div className="tabular flex items-center gap-3 text-[--fg-dim]">
+                    <span className="text-[var(--fg)]">{s.source}</span>
+                    <div className="tabular flex items-center gap-3 text-[var(--fg-dim)]">
                       <span>{formatNumber(s.count)} transactions</span>
                       <span>{formatDate(s.max_date ?? undefined)}</span>
                     </div>
@@ -131,14 +131,14 @@ export function SettingsClient() {
 
           <SectionCard title="Preferences" icon={RefreshCw}>
             <div className="flex flex-col gap-2 text-xs">
-              <div className="flex items-center justify-between rounded-md border border-[--border] bg-[--bg] px-3 py-2">
-                <span className="text-[--fg-muted]">Active filters</span>
-                <span className="tabular text-[--fg-dim]">{filterCount} fields</span>
+              <div className="flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2">
+                <span className="text-[var(--fg-muted)]">Active filters</span>
+                <span className="tabular text-[var(--fg-dim)]">{filterCount} fields</span>
               </div>
               <button
                 onClick={resetFilters}
                 disabled={filterCount === 0}
-                className="flex items-center justify-center gap-2 rounded-md border border-[--border] bg-[--bg] px-3 py-2 text-[--fg-muted] hover:border-[--border-strong] disabled:opacity-40"
+                className="flex items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--fg-muted)] hover:border-[var(--border-strong)] disabled:opacity-40"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Reset filters

@@ -27,7 +27,7 @@ export function SeasonalityChart({ city }: { city?: string }) {
   return (
     <ChartCard title="Seasonality" subtitle="Transactions by month" className="h-72">
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center text-xs text-[--fg-dim]">Loading…</div>
+        <div className="flex h-48 items-center justify-center text-xs text-[var(--fg-dim)]">Loading…</div>
       ) : (
         <ResponsiveContainer width="100%" height={210}>
           <BarChart data={chart} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>

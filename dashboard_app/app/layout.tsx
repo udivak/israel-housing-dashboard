@@ -28,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-[--bg] font-sans text-[--fg] antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-[var(--bg)] font-sans text-[var(--fg)] antialiased`}
       >
         <QueryProvider>
           <Header />

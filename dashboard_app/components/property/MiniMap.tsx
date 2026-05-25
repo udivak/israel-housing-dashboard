@@ -17,7 +17,7 @@ export function MiniMap({
   lng,
   lat,
   zoom = 15,
-  className = "h-48 w-full overflow-hidden rounded-xl border border-[--border]",
+  className = "h-48 w-full overflow-hidden rounded-xl border border-[var(--border)]",
   showMarker = true,
 }: MiniMapProps) {
   const ref = useRef<HTMLDivElement>(null);

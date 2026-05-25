@@ -118,15 +118,15 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
   return (
     <Card className="space-y-4">
       <div className="flex items-center gap-2">
-        <Brain className="h-4 w-4 text-[--accent-1]" />
-        <h3 className="text-sm font-semibold text-[--fg]">Price prediction</h3>
+        <Brain className="h-4 w-4 text-[var(--accent-1)]" />
+        <h3 className="text-sm font-semibold text-[var(--fg)]">Price prediction</h3>
       </div>
 
       <div className="flex flex-col gap-2">
         <select
           value={selectedModel}
           onChange={(e) => setSelectedModel(e.target.value)}
-          className="rounded-md border border-[--border] bg-[--bg] px-2.5 py-1.5 text-sm text-[--fg]"
+          className="rounded-md border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--fg)]"
         >
           <option value="">Champion (default)</option>
           {models.map((m) => (
@@ -138,7 +138,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
         <button
           onClick={onPredict}
           disabled={single.isPending}
-          className="flex items-center justify-center gap-2 rounded-md bg-[--accent-1] px-3 py-2 text-sm font-semibold text-[--bg] hover:opacity-90 disabled:opacity-60"
+          className="flex items-center justify-center gap-2 rounded-md bg-[var(--accent-1)] px-3 py-2 text-sm font-semibold text-[var(--bg)] hover:opacity-90 disabled:opacity-60"
         >
           {single.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -150,17 +150,17 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
       </div>
 
       {single.data && (
-        <div className="rounded-lg border border-[--border] bg-[--bg] p-4">
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <div className="text-xs uppercase tracking-wide text-[--fg-dim]">Predicted</div>
+              <div className="text-xs uppercase tracking-wide text-[var(--fg-dim)]">Predicted</div>
               <div className="tabular mt-1 text-xl font-semibold">
                 <GradientText>{formatCurrency(predicted)}</GradientText>
               </div>
             </div>
             <div>
-              <div className="text-xs uppercase tracking-wide text-[--fg-dim]">Listed</div>
-              <div className="tabular mt-1 text-xl font-semibold text-[--fg]">
+              <div className="text-xs uppercase tracking-wide text-[var(--fg-dim)]">Listed</div>
+              <div className="tabular mt-1 text-xl font-semibold text-[var(--fg)]">
                 {formatCurrency(listed)}
               </div>
             </div>
@@ -175,11 +175,11 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
           )}
           {confidencePct != null && (
             <div className="mt-3">
-              <div className="mb-1 flex items-center justify-between text-[11px] text-[--fg-dim]">
+              <div className="mb-1 flex items-center justify-between text-[11px] text-[var(--fg-dim)]">
                 <span>Model confidence (spread)</span>
                 <span className="tabular">{confidencePct.toFixed(0)}%</span>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-[--bg-elev-2]">
+              <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-elev-2)]">
                 <div
                   className="h-full bg-[image:linear-gradient(90deg,var(--accent-1),var(--accent-2))]"
                   style={{ width: `${confidencePct}%` }}
@@ -187,17 +187,17 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
               </div>
             </div>
           )}
-          <div className="mt-3 text-[11px] text-[--fg-dim]">
+          <div className="mt-3 text-[11px] text-[var(--fg-dim)]">
             Model: {modelDisplayName(single.data.model)}
           </div>
         </div>
       )}
 
-      <div className="border-t border-[--border] pt-3">
+      <div className="border-t border-[var(--border)] pt-3">
         <button
           onClick={() => (showAll ? setShowAll(false) : onCompare())}
           disabled={compare.isPending}
-          className="flex w-full items-center justify-between rounded-md border border-[--border] bg-[--bg] px-3 py-2 text-xs text-[--fg-muted] hover:border-[--border-strong] disabled:opacity-60"
+          className="flex w-full items-center justify-between rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs text-[var(--fg-muted)] hover:border-[var(--border-strong)] disabled:opacity-60"
         >
           <span className="flex items-center gap-2">
             <GitCompare className="h-3.5 w-3.5" />
@@ -215,14 +215,14 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
         {showAll && compare.data && (
           <div className="mt-3 space-y-2">
             {compare.data.consensus_price != null && (
-              <div className="rounded-md border border-[--accent-2]/30 bg-[--bg] p-3">
-                <div className="text-[11px] uppercase tracking-wide text-[--fg-dim]">
+              <div className="rounded-md border border-[var(--accent-2)]/30 bg-[var(--bg)] p-3">
+                <div className="text-[11px] uppercase tracking-wide text-[var(--fg-dim)]">
                   Consensus (median)
                 </div>
-                <div className="tabular text-lg font-semibold text-[--fg]">
+                <div className="tabular text-lg font-semibold text-[var(--fg)]">
                   {formatCurrency(compare.data.consensus_price)}
                 </div>
-                <div className="tabular mt-0.5 text-[11px] text-[--fg-dim]">
+                <div className="tabular mt-0.5 text-[11px] text-[var(--fg-dim)]">
                   spread {formatCurrency(compare.data.spread_price)} · stddev{" "}
                   {formatCurrency(compare.data.stddev_price)}
                 </div>
@@ -232,13 +232,13 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
               {compare.data.items.map((it) => (
                 <div
                   key={it.model}
-                  className="flex items-center justify-between rounded-md border border-[--border] bg-[--bg] px-3 py-1.5 text-xs"
+                  className="flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-xs"
                 >
-                  <span className="text-[--fg-muted]">{modelDisplayName(it.model)}</span>
+                  <span className="text-[var(--fg-muted)]">{modelDisplayName(it.model)}</span>
                   {it.error ? (
                     <Pill tone="down">error</Pill>
                   ) : (
-                    <span className="tabular font-medium text-[--fg]">
+                    <span className="tabular font-medium text-[var(--fg)]">
                       {formatCurrency(it.predicted_price)}
                     </span>
                   )}
@@ -250,7 +250,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
       </div>
 
       {(single.isError || compare.isError) && (
-        <div className="rounded-md border border-[--down]/30 bg-[--down]/10 p-2 text-xs text-[--down]">
+        <div className="rounded-md border border-[var(--down)]/30 bg-[var(--down)]/10 p-2 text-xs text-[var(--down)]">
           Prediction error. Verify prediction_service is running and a champion model is set.
         </div>
       )}

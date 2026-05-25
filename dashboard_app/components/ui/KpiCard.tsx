@@ -26,31 +26,31 @@ export function KpiCard({
 }: KpiCardProps) {
   const deltaColor =
     deltaTone === "up"
-      ? "text-[--up]"
+      ? "text-[var(--up)]"
       : deltaTone === "down"
-        ? "text-[--down]"
-        : "text-[--fg-muted]";
+        ? "text-[var(--down)]"
+        : "text-[var(--fg-muted)]";
 
   return (
     <div
       className={cn(
-        "group rounded-xl border border-[--border] bg-gradient-to-b from-[--bg-elev] to-[--bg-elev-2] p-4 transition-colors hover:border-[--border-strong]",
+        "group rounded-xl border border-[var(--border)] bg-gradient-to-b from-[var(--bg-elev)] to-[var(--bg-elev-2)] p-4 transition-colors hover:border-[var(--border-strong)]",
         className,
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-[--fg-dim]">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-[var(--fg-dim)]">
             {Icon && <Icon className="h-3.5 w-3.5" />}
             <span className="truncate">{label}</span>
           </div>
-          <div className="tabular mt-2 text-2xl font-semibold tracking-tight text-[--fg]">
+          <div className="tabular mt-2 text-2xl font-semibold tracking-tight text-[var(--fg)]">
             {value}
           </div>
           {(delta || hint) && (
             <div className="mt-1 flex items-center gap-2 text-xs">
               {delta && <span className={cn("tabular font-medium", deltaColor)}>{delta}</span>}
-              {hint && <span className="text-[--fg-dim]">{hint}</span>}
+              {hint && <span className="text-[var(--fg-dim)]">{hint}</span>}
             </div>
           )}
         </div>

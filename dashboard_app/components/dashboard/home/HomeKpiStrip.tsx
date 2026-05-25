@@ -25,7 +25,7 @@ export function HomeKpiStrip() {
   const best = pickBestModel(models);
 
   return (
-    <section className="border-b border-[--border] bg-[--bg]">
+    <section className="border-b border-[var(--border)] bg-[var(--bg)]">
       <div className="grid grid-cols-2 gap-3 px-6 py-12 sm:gap-4 lg:grid-cols-4">
         <KpiCard
           label="Listings"

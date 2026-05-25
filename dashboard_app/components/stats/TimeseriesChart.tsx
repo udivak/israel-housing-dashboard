@@ -37,8 +37,8 @@ export function TimeseriesChart({ city }: { city?: string }) {
             onClick={() => setGranularity(g.value)}
             className={`rounded-md px-2 py-1 text-xs transition-colors ${
               granularity === g.value
-                ? "bg-[--accent-1]/15 text-[--accent-1]"
-                : "text-[--fg-muted] hover:bg-[--bg-elev-2]"
+                ? "bg-[var(--accent-1)]/15 text-[var(--accent-1)]"
+                : "text-[var(--fg-muted)] hover:bg-[var(--bg-elev-2)]"
             }`}
           >
             {g.label}
@@ -46,7 +46,7 @@ export function TimeseriesChart({ city }: { city?: string }) {
         ))}
       </div>
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center text-xs text-[--fg-dim]">Loading…</div>
+        <div className="flex h-48 items-center justify-center text-xs text-[var(--fg-dim)]">Loading…</div>
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>

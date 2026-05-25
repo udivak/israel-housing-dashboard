@@ -12,7 +12,7 @@ export function SourceBreakdown() {
   return (
     <ChartCard title="By source" subtitle={`${fmtNum(total)} records`} className="h-72">
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center text-xs text-[--fg-dim]">Loading…</div>
+        <div className="flex h-48 items-center justify-center text-xs text-[var(--fg-dim)]">Loading…</div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <ResponsiveContainer width="100%" height={200}>
@@ -42,8 +42,8 @@ export function SourceBreakdown() {
                   className="h-2.5 w-2.5 rounded-sm"
                   style={{ backgroundColor: CHART_SERIES[i % CHART_SERIES.length] }}
                 />
-                <span className="flex-1 truncate text-[--fg-muted]">{r.source}</span>
-                <span className="tabular text-[--fg-dim]">{fmtNum(r.count)}</span>
+                <span className="flex-1 truncate text-[var(--fg-muted)]">{r.source}</span>
+                <span className="tabular text-[var(--fg-dim)]">{fmtNum(r.count)}</span>
               </li>
             ))}
           </ul>
@@ -60,7 +60,7 @@ export function PropertyTypeBreakdown({ city }: { city?: string }) {
   return (
     <ChartCard title="By property type" subtitle={city ?? "Country-wide"} className="h-72">
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center text-xs text-[--fg-dim]">Loading…</div>
+        <div className="flex h-48 items-center justify-center text-xs text-[var(--fg-dim)]">Loading…</div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <ResponsiveContainer width="100%" height={200}>
@@ -90,8 +90,8 @@ export function PropertyTypeBreakdown({ city }: { city?: string }) {
                   className="h-2.5 w-2.5 rounded-sm"
                   style={{ backgroundColor: CHART_SERIES[i % CHART_SERIES.length] }}
                 />
-                <span className="flex-1 truncate text-[--fg-muted]">{r.type}</span>
-                <span className="tabular text-[--fg-dim]">{fmtNum(r.count)}</span>
+                <span className="flex-1 truncate text-[var(--fg-muted)]">{r.type}</span>
+                <span className="tabular text-[var(--fg-dim)]">{fmtNum(r.count)}</span>
               </li>
             ))}
           </ul>

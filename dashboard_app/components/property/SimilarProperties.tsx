@@ -37,14 +37,14 @@ export function SimilarProperties({ id }: { id: string }) {
   return (
     <Card>
       <div className="mb-3 flex items-center gap-2">
-        <Home className="h-4 w-4 text-[--accent-1]" />
-        <h3 className="text-sm font-semibold text-[--fg]">Similar properties</h3>
-        <span className="text-xs text-[--fg-dim]">within 800m</span>
+        <Home className="h-4 w-4 text-[var(--accent-1)]" />
+        <h3 className="text-sm font-semibold text-[var(--fg)]">Similar properties</h3>
+        <span className="text-xs text-[var(--fg-dim)]">within 800m</span>
       </div>
       {isLoading ? (
-        <div className="text-xs text-[--fg-dim]">Loading…</div>
+        <div className="text-xs text-[var(--fg-dim)]">Loading…</div>
       ) : !data?.results.length ? (
-        <div className="text-xs text-[--fg-dim]">No nearby properties found</div>
+        <div className="text-xs text-[var(--fg-dim)]">No nearby properties found</div>
       ) : (
         <ul className="space-y-1">
           {data.results.slice(0, 8).map((p: PropertyDoc) => {
@@ -59,18 +59,18 @@ export function SimilarProperties({ id }: { id: string }) {
               <li key={p.id}>
                 <Link
                   href={`/property/${encodeURIComponent(p.id)}`}
-                  className="flex items-center justify-between gap-3 rounded-md border border-[--border] bg-[--bg] px-3 py-2 text-xs transition-colors hover:border-[--border-strong]"
+                  className="flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs transition-colors hover:border-[var(--border-strong)]"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[--fg]">{p.neighborhood ?? p.city ?? "—"}</div>
-                    <div className="tabular truncate text-[--fg-dim]">
+                    <div className="truncate text-[var(--fg)]">{p.neighborhood ?? p.city ?? "—"}</div>
+                    <div className="tabular truncate text-[var(--fg-dim)]">
                       {p.rooms ? `${formatNumber(p.rooms)} rm` : ""}
                       {p.rooms && p.area_sqm ? " · " : ""}
                       {p.area_sqm ? `${formatNumber(p.area_sqm)} m²` : ""}
                     </div>
                   </div>
                   <Sparkline values={trail} />
-                  <div className="tabular w-24 text-right font-medium text-[--fg]">
+                  <div className="tabular w-24 text-right font-medium text-[var(--fg)]">
                     {formatCurrency(p.price)}
                   </div>
                 </Link>

@@ -151,8 +151,8 @@ export function PredictPlayground() {
     >
       <Card className="space-y-5 p-5">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-xs font-medium text-[--fg-muted]">
-            <MapPin className="h-3.5 w-3.5 text-[--accent-1]" />
+          <div className="mb-2 flex items-center gap-2 text-xs font-medium text-[var(--fg-muted)]">
+            <MapPin className="h-3.5 w-3.5 text-[var(--accent-1)]" />
             Property address
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -162,12 +162,12 @@ export function PredictPlayground() {
               onChange={(e) => setAddress(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleGeocode()}
               placeholder="e.g., Rothschild 22, Tel Aviv"
-              className="flex-1 rounded-md border border-[--border] bg-[--bg] px-2.5 py-1.5 text-sm text-[--fg] placeholder:text-[--fg-dim] focus:border-[--accent-1]/50 focus:outline-none"
+              className="flex-1 rounded-md border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--fg)] placeholder:text-[var(--fg-dim)] focus:border-[var(--accent-1)]/50 focus:outline-none"
             />
             <button
               onClick={handleGeocode}
               disabled={geocoding || !address.trim()}
-              className="flex items-center justify-center gap-2 rounded-md border border-[--border] bg-[--bg] px-3 py-1.5 text-sm text-[--fg] hover:border-[--border-strong] disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--fg)] hover:border-[var(--border-strong)] disabled:opacity-50"
             >
               {geocoding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
               Search
@@ -178,39 +178,39 @@ export function PredictPlayground() {
               <Pill tone="up">
                 <MapPin className="h-3 w-3" /> {resolved.label}
               </Pill>
-              <span className="tabular text-[--fg-dim]">
+              <span className="tabular text-[var(--fg-dim)]">
                 ({resolved.lat.toFixed(4)}, {resolved.lon.toFixed(4)})
               </span>
             </div>
           )}
           {geocodeError && (
-            <div className="mt-2 text-xs text-[--down]">{geocodeError}</div>
+            <div className="mt-2 text-xs text-[var(--down)]">{geocodeError}</div>
           )}
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
           {FIELDS.map((f) => (
             <label key={f.key} className="flex flex-col gap-1 text-xs">
-              <span className="text-[--fg-muted]">{f.label}</span>
+              <span className="text-[var(--fg-muted)]">{f.label}</span>
               <input
                 type={f.type ?? "text"}
                 step={f.step}
                 value={values[f.key] ?? ""}
                 onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
-                className="tabular w-full rounded-md border border-[--border] bg-[--bg] px-2.5 py-1.5 text-sm text-[--fg] focus:border-[--accent-1]/50 focus:outline-none"
+                className="tabular w-full rounded-md border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--fg)] focus:border-[var(--accent-1)]/50 focus:outline-none"
               />
-              {f.hint && <span className="text-[10px] text-[--fg-dim]">{f.hint}</span>}
+              {f.hint && <span className="text-[10px] text-[var(--fg-dim)]">{f.hint}</span>}
             </label>
           ))}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-xs text-[--fg-muted]">
+          <label className="flex items-center gap-2 text-xs text-[var(--fg-muted)]">
             <input
               type="checkbox"
               checked={compareMode}
               onChange={(e) => setCompareMode(e.target.checked)}
-              className="h-3.5 w-3.5 accent-[--accent-1]"
+              className="h-3.5 w-3.5 accent-[var(--accent-1)]"
             />
             Compare all models
           </label>
@@ -218,7 +218,7 @@ export function PredictPlayground() {
             <select
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
-              className="rounded-md border border-[--border] bg-[--bg] px-2.5 py-1.5 text-sm text-[--fg]"
+              className="rounded-md border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--fg)]"
             >
               <option value="">Champion (default)</option>
               {models.map((m) => (
@@ -231,7 +231,7 @@ export function PredictPlayground() {
           <button
             onClick={onRun}
             disabled={single.isPending || compare.isPending}
-            className="flex items-center gap-2 rounded-md bg-[--accent-1] px-4 py-2 text-sm font-semibold text-[--bg] hover:opacity-90 disabled:opacity-60"
+            className="flex items-center gap-2 rounded-md bg-[var(--accent-1)] px-4 py-2 text-sm font-semibold text-[var(--bg)] hover:opacity-90 disabled:opacity-60"
           >
             {single.isPending || compare.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -245,8 +245,8 @@ export function PredictPlayground() {
         </div>
 
         {!compareMode && single.data && (
-          <div className="rounded-lg border border-[--accent-1]/30 bg-[--bg] p-4">
-            <div className="text-xs uppercase tracking-wide text-[--fg-dim]">
+          <div className="rounded-lg border border-[var(--accent-1)]/30 bg-[var(--bg)] p-4">
+            <div className="text-xs uppercase tracking-wide text-[var(--fg-dim)]">
               Predicted · {modelDisplayName(single.data.model)}
             </div>
             <div className="tabular mt-1 text-3xl font-semibold">
@@ -258,14 +258,14 @@ export function PredictPlayground() {
         {compareMode && compare.data && (
           <div className="space-y-2">
             {compare.data.consensus_price != null && (
-              <div className="rounded-lg border border-[--accent-2]/30 bg-[--bg] p-4">
-                <div className="text-xs uppercase tracking-wide text-[--fg-dim]">
+              <div className="rounded-lg border border-[var(--accent-2)]/30 bg-[var(--bg)] p-4">
+                <div className="text-xs uppercase tracking-wide text-[var(--fg-dim)]">
                   Consensus (median)
                 </div>
                 <div className="tabular mt-1 text-3xl font-semibold">
                   <GradientText>{formatCurrency(compare.data.consensus_price)}</GradientText>
                 </div>
-                <div className="tabular mt-1 text-xs text-[--fg-dim]">
+                <div className="tabular mt-1 text-xs text-[var(--fg-dim)]">
                   spread {formatCurrency(compare.data.spread_price)} · stddev{" "}
                   {formatCurrency(compare.data.stddev_price)}
                 </div>
@@ -275,13 +275,13 @@ export function PredictPlayground() {
               {compare.data.items.map((it) => (
                 <div
                   key={it.model}
-                  className="flex items-center justify-between rounded-md border border-[--border] bg-[--bg] px-3 py-2 text-xs"
+                  className="flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs"
                 >
-                  <span className="text-[--fg-muted]">{modelDisplayName(it.model)}</span>
+                  <span className="text-[var(--fg-muted)]">{modelDisplayName(it.model)}</span>
                   {it.error ? (
                     <Pill tone="down">error</Pill>
                   ) : (
-                    <span className="tabular font-medium text-[--fg]">
+                    <span className="tabular font-medium text-[var(--fg)]">
                       {formatCurrency(it.predicted_price)}
                     </span>
                   )}
@@ -292,7 +292,7 @@ export function PredictPlayground() {
         )}
 
         {(single.isError || compare.isError) && (
-          <div className="rounded-md border border-[--down]/30 bg-[--down]/10 p-3 text-xs text-[--down]">
+          <div className="rounded-md border border-[var(--down)]/30 bg-[var(--down)]/10 p-3 text-xs text-[var(--down)]">
             Prediction error. Check that prediction_service is running and a champion model is set.
           </div>
         )}

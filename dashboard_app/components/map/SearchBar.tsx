@@ -94,7 +94,7 @@ export function SearchBar({
   return (
     <div ref={wrapperRef} className={cn("relative w-full max-w-xl", className)}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[--fg-dim]" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--fg-dim)]" />
         <input
           type="text"
           value={query}
@@ -103,17 +103,17 @@ export function SearchBar({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className={cn(
-            "w-full rounded-md border border-[--border] bg-[--bg-elev] py-3 pl-10 pr-10 text-sm text-[--fg] placeholder:text-[--fg-dim] focus:border-[--accent-1]/50 focus:outline-none focus:ring-2 focus:ring-[--accent-1]/20",
+            "w-full rounded-md border border-[var(--border)] bg-[var(--bg-elev)] py-3 pl-10 pr-10 text-sm text-[var(--fg)] placeholder:text-[var(--fg-dim)] focus:border-[var(--accent-1)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent-1)]/20",
             inputClassName,
           )}
         />
         {isLoading && (
-          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-[--accent-1]" />
+          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-[var(--accent-1)]" />
         )}
       </div>
 
       {isOpen && results.length > 0 && (
-        <ul className="absolute top-full left-0 right-0 z-50 mt-2 max-h-72 overflow-auto rounded-md border border-[--border] bg-[--bg-elev] py-2 shadow-2xl backdrop-blur-xl">
+        <ul className="absolute top-full left-0 right-0 z-50 mt-2 max-h-72 overflow-auto rounded-md border border-[var(--border)] bg-[var(--bg-elev)] py-2 shadow-2xl backdrop-blur-xl">
           {results.map((f, i) => {
             const [lon, lat] = f.geometry.coordinates;
             const isSelected = i === selectedIndex;
@@ -126,14 +126,14 @@ export function SearchBar({
                   className={cn(
                     "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors",
                     isSelected
-                      ? "bg-[--accent-1]/15 text-[--accent-1]"
-                      : "text-[--fg] hover:bg-[--bg-elev-2]",
+                      ? "bg-[var(--accent-1)]/15 text-[var(--accent-1)]"
+                      : "text-[var(--fg)] hover:bg-[var(--bg-elev-2)]",
                   )}
                 >
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[--fg-dim]" />
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--fg-dim)]" />
                   <div>
                     <p className="font-medium">{formatAddress(f)}</p>
-                    <p className="text-xs text-[--fg-dim]">
+                    <p className="text-xs text-[var(--fg-dim)]">
                       {f.properties.type} · {f.properties.country ?? ""}
                     </p>
                   </div>

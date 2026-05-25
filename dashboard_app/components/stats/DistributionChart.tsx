@@ -42,8 +42,8 @@ export function DistributionChart({ city }: { city?: string }) {
             onClick={() => setField(f.value)}
             className={`rounded-md px-2 py-1 text-xs transition-colors ${
               field === f.value
-                ? "bg-[--accent-1]/15 text-[--accent-1]"
-                : "text-[--fg-muted] hover:bg-[--bg-elev-2]"
+                ? "bg-[var(--accent-1)]/15 text-[var(--accent-1)]"
+                : "text-[var(--fg-muted)] hover:bg-[var(--bg-elev-2)]"
             }`}
           >
             {f.label}
@@ -51,7 +51,7 @@ export function DistributionChart({ city }: { city?: string }) {
         ))}
       </div>
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center text-xs text-[--fg-dim]">Loading…</div>
+        <div className="flex h-48 items-center justify-center text-xs text-[var(--fg-dim)]">Loading…</div>
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>

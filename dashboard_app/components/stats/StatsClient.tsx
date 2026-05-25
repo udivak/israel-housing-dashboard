@@ -33,7 +33,7 @@ export function StatsClient() {
             value={city}
             onChange={(e) => setCity(e.target.value)}
             placeholder="Filter by city…"
-            className="w-64 rounded-md border border-[--border] bg-[--bg-elev] px-3 py-1.5 text-sm text-[--fg] placeholder:text-[--fg-dim] focus:border-[--accent-1]/50 focus:outline-none"
+            className="w-64 rounded-md border border-[var(--border)] bg-[var(--bg-elev)] px-3 py-1.5 text-sm text-[var(--fg)] placeholder:text-[var(--fg-dim)] focus:border-[var(--accent-1)]/50 focus:outline-none"
           />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">

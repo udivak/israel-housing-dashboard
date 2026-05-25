@@ -36,7 +36,7 @@ export function LocaleToggle({ className }: { className?: string }) {
       role="radiogroup"
       aria-label="Language"
       className={cn(
-        "inline-flex items-center rounded-full border border-[--border] bg-[--bg-elev] p-0.5 text-xs font-medium",
+        "inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--bg-elev)] p-0.5 text-xs font-medium",
         className,
       )}
     >
@@ -47,8 +47,8 @@ export function LocaleToggle({ className }: { className?: string }) {
         className={cn(
           "rounded-full px-2.5 py-1 transition-colors",
           locale === "en"
-            ? "bg-[--accent-1]/15 text-[--accent-1]"
-            : "text-[--fg-dim] hover:text-[--fg]",
+            ? "bg-[var(--accent-1)]/15 text-[var(--accent-1)]"
+            : "text-[var(--fg-dim)] hover:text-[var(--fg)]",
         )}
       >
         EN
@@ -60,8 +60,8 @@ export function LocaleToggle({ className }: { className?: string }) {
         className={cn(
           "rounded-full px-2.5 py-1 transition-colors",
           locale === "he"
-            ? "bg-[--accent-1]/15 text-[--accent-1]"
-            : "text-[--fg-dim] hover:text-[--fg]",
+            ? "bg-[var(--accent-1)]/15 text-[var(--accent-1)]"
+            : "text-[var(--fg-dim)] hover:text-[var(--fg)]",
         )}
       >
         עב

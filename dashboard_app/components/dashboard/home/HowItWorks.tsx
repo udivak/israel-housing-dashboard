@@ -44,15 +44,15 @@ export function HowItWorks() {
           return (
             <div
               key={s.n}
-              className="rounded-xl border border-[--border] bg-[--bg-elev] p-4 transition-colors hover:border-[--border-strong]"
+              className="rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] p-4 transition-colors hover:border-[var(--border-strong)]"
             >
-              <div className="flex items-center justify-between text-xs uppercase tracking-wide text-[--fg-dim]">
+              <div className="flex items-center justify-between text-xs uppercase tracking-wide text-[var(--fg-dim)]">
                 <span className="tabular">{s.n}</span>
-                <Icon className="h-4 w-4 text-[--accent-1]" />
+                <Icon className="h-4 w-4 text-[var(--accent-1)]" />
               </div>
-              <div className="mt-3 text-sm font-semibold text-[--fg]">{s.title}</div>
+              <div className="mt-3 text-sm font-semibold text-[var(--fg)]">{s.title}</div>
               {/* i18n:tbd — long-form descriptive copy stays English in v1 */}
-              <p className="mt-1.5 text-xs leading-relaxed text-[--fg-muted]">{s.body}</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-[var(--fg-muted)]">{s.body}</p>
             </div>
           );
         })}

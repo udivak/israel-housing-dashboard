@@ -26,7 +26,7 @@ export function ModelGarden({ compact = false }: ModelGardenProps) {
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={i}
-            className="h-24 animate-pulse rounded-xl border border-[--border] bg-[--bg-elev]"
+            className="h-24 animate-pulse rounded-xl border border-[var(--border)] bg-[var(--bg-elev)]"
           />
         ))}
       </div>
@@ -35,7 +35,7 @@ export function ModelGarden({ compact = false }: ModelGardenProps) {
 
   if (!models.length) {
     return (
-      <div className="rounded-xl border border-[--border] bg-[--bg-elev] p-6 text-sm text-[--fg-muted]">
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] p-6 text-sm text-[var(--fg-muted)]">
         No models available. Start the prediction_service to populate this list.
       </div>
     );
@@ -61,28 +61,28 @@ export function ModelGarden({ compact = false }: ModelGardenProps) {
           <div
             key={m.id}
             className={cn(
-              "rounded-xl border border-[--border] bg-[--bg-elev] p-4 transition-colors hover:border-[--border-strong]",
+              "rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] p-4 transition-colors hover:border-[var(--border-strong)]",
               !isBest && "opacity-70 hover:opacity-100",
             )}
           >
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-[--fg-dim]">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-[var(--fg-dim)]">
                 <Brain className="h-3.5 w-3.5" />
                 model
               </div>
               {isBest && <Pill tone="accent">★ best</Pill>}
             </div>
-            <div className="mt-2 truncate text-sm font-semibold text-[--fg]">
+            <div className="mt-2 truncate text-sm font-semibold text-[var(--fg)]">
               {modelDisplayName(m.id)}
             </div>
             <div className="tabular mt-3 grid grid-cols-2 gap-2 text-xs">
               <div>
-                <div className="text-[--fg-dim]">R²</div>
-                <div className="font-medium text-[--fg]">{r2 != null ? r2.toFixed(3) : "—"}</div>
+                <div className="text-[var(--fg-dim)]">R²</div>
+                <div className="font-medium text-[var(--fg)]">{r2 != null ? r2.toFixed(3) : "—"}</div>
               </div>
               <div>
-                <div className="text-[--fg-dim]">{mae != null ? "MAE" : "MAPE"}</div>
-                <div className="font-medium text-[--fg]">
+                <div className="text-[var(--fg-dim)]">{mae != null ? "MAE" : "MAPE"}</div>
+                <div className="font-medium text-[var(--fg)]">
                   {mae != null
                     ? mae.toLocaleString("en-US", { maximumFractionDigits: 0 })
                     : mape != null

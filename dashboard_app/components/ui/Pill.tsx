@@ -8,11 +8,11 @@ interface PillProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 
 const TONE: Record<PillTone, string> = {
-  default: "border-[--border] bg-[--bg-elev-2] text-[--fg-muted]",
-  accent: "border-[--accent-1]/30 bg-[--accent-1]/10 text-[--accent-1]",
-  muted: "border-[--border] bg-[--bg-elev] text-[--fg-dim]",
-  up: "border-[--up]/30 bg-[--up]/10 text-[--up]",
-  down: "border-[--down]/30 bg-[--down]/10 text-[--down]",
+  default: "border-[var(--border)] bg-[var(--bg-elev-2)] text-[var(--fg-muted)]",
+  accent: "border-[var(--accent-1)]/30 bg-[var(--accent-1)]/10 text-[var(--accent-1)]",
+  muted: "border-[var(--border)] bg-[var(--bg-elev)] text-[var(--fg-dim)]",
+  up: "border-[var(--up)]/30 bg-[var(--up)]/10 text-[var(--up)]",
+  down: "border-[var(--down)]/30 bg-[var(--down)]/10 text-[var(--down)]",
   live: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
 };
 

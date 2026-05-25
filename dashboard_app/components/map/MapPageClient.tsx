@@ -7,8 +7,8 @@ import { KpiStrip } from "./KpiStrip";
 const LiveMap = dynamic(() => import("./LiveMap").then((m) => m.LiveMap), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full w-full items-center justify-center rounded-xl border border-[--border] bg-[--bg-elev]">
-      <div className="text-sm text-[--fg-muted]">Loading map…</div>
+    <div className="flex h-full w-full items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg-elev)]">
+      <div className="text-sm text-[var(--fg-muted)]">Loading map…</div>
     </div>
   ),
 });

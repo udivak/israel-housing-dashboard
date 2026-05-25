@@ -13,7 +13,7 @@ const MiniMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full w-full items-center justify-center text-xs text-[--fg-dim]">
+      <div className="flex h-full w-full items-center justify-center text-xs text-[var(--fg-dim)]">
         Loading preview…
       </div>
     ),
@@ -41,12 +41,12 @@ export function MapPreview() {
       title="Live map preview"
       subtitle="Cyan-to-violet heat across H3 cells. Click to dive in."
       rightLink={{ href: "/map", label: "Open the map" }}
-      className="border-b border-[--border] px-6 py-12"
+      className="border-b border-[var(--border)] px-6 py-12"
     >
       <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
         <Link
           href="/map"
-          className="group relative h-[280px] overflow-hidden rounded-xl border border-[--border] bg-[--bg-elev]"
+          className="group relative h-[280px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-elev)]"
         >
           <MiniMap
             lng={34.7818}
@@ -55,10 +55,10 @@ export function MapPreview() {
             showMarker={false}
             className="h-full w-full"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-[--bg]/40 via-transparent to-[--accent-2]/15" />
-          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between rounded-md border border-[--border] bg-[--bg]/70 px-3 py-2 text-xs text-[--fg-muted] backdrop-blur">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-[var(--bg)]/40 via-transparent to-[var(--accent-2)]/15" />
+          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--bg)]/70 px-3 py-2 text-xs text-[var(--fg-muted)] backdrop-blur">
             <span>Tel Aviv–Yafo</span>
-            <span className="font-medium text-[--accent-1] transition-transform group-hover:translate-x-1 rtl-flip">
+            <span className="font-medium text-[var(--accent-1)] transition-transform group-hover:translate-x-1 rtl-flip">
               Explore →
             </span>
           </div>
