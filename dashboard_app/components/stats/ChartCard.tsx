@@ -1,20 +1,30 @@
 "use client";
 
+import * as React from "react";
+import { cn } from "@/lib/utils";
+
 interface ChartCardProps {
   title: string;
   subtitle?: string;
+  right?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }
 
-export function ChartCard({ title, subtitle, children, className = "" }: ChartCardProps) {
+export function ChartCard({ title, subtitle, right, children, className }: ChartCardProps) {
   return (
     <div
-      className={`flex flex-col gap-3 rounded-xl border border-white/10 bg-zinc-900/60 p-4 backdrop-blur ${className}`}
+      className={cn(
+        "flex flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] p-4 transition-colors hover:border-[var(--border-strong)]",
+        className,
+      )}
     >
-      <div>
-        <h3 className="text-sm font-semibold text-white">{title}</h3>
-        {subtitle && <p className="text-xs text-zinc-400">{subtitle}</p>}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold tracking-tight text-[var(--fg)]">{title}</h3>
+          {subtitle && <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{subtitle}</p>}
+        </div>
+        {right && <div className="shrink-0 text-xs text-[var(--fg-muted)]">{right}</div>}
       </div>
       <div className="min-h-0 flex-1">{children}</div>
     </div>

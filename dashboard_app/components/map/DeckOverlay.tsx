@@ -81,16 +81,16 @@ export function DeckOverlay({ map, data, onPointClick }: DeckOverlayProps) {
               ["==", ["get", "coord_source"], "parcel_centroid"], 4,
               3,
             ],
-            // Color scales with price/m² along a red->blue gradient
+            // Cyan→violet heat ramp (matches dashboard accent palette)
             "circle-color": [
               "interpolate",
               ["linear"],
               ["get", "ppsm"],
-              5000, "#33a3d4",
-              15000, "#8ddccd",
-              25000, "#fde0a3",
-              40000, "#f08c69",
-              80000, "#b22834",
+              5000, "#22d3ee",
+              15000, "#38bdf8",
+              25000, "#818cf8",
+              40000, "#a78bfa",
+              80000, "#c084fc",
             ],
             "circle-opacity": [
               "case",

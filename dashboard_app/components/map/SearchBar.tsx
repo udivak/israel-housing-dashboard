@@ -9,12 +9,14 @@ interface SearchBarProps {
   onSelect: (lon: number, lat: number, zoom?: number) => void;
   placeholder?: string;
   className?: string;
+  inputClassName?: string;
 }
 
 export function SearchBar({
   onSelect,
   placeholder = "Search street, city, address...",
   className = "",
+  inputClassName = "",
 }: SearchBarProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PhotonFeature[]>([]);
@@ -92,7 +94,7 @@ export function SearchBar({
   return (
     <div ref={wrapperRef} className={cn("relative w-full max-w-xl", className)}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--fg-dim)]" />
         <input
           type="text"
           value={query}
@@ -100,15 +102,18 @@ export function SearchBar({
           onFocus={() => results.length > 0 && setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="w-full rounded-xl border border-white/10 bg-zinc-900/90 py-3 pl-10 pr-10 text-sm text-white placeholder-zinc-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+          className={cn(
+            "w-full rounded-md border border-[var(--border)] bg-[var(--bg-elev)] py-3 pl-10 pr-10 text-sm text-[var(--fg)] placeholder:text-[var(--fg-dim)] focus:border-[var(--accent-1)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent-1)]/20",
+            inputClassName,
+          )}
         />
         {isLoading && (
-          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-cyan-400" />
+          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-[var(--accent-1)]" />
         )}
       </div>
 
       {isOpen && results.length > 0 && (
-        <ul className="absolute top-full left-0 right-0 z-50 mt-2 max-h-72 overflow-auto rounded-xl border border-white/10 bg-zinc-900/95 py-2 shadow-xl backdrop-blur-xl">
+        <ul className="absolute top-full left-0 right-0 z-50 mt-2 max-h-72 overflow-auto rounded-md border border-[var(--border)] bg-[var(--bg-elev)] py-2 shadow-2xl backdrop-blur-xl">
           {results.map((f, i) => {
             const [lon, lat] = f.geometry.coordinates;
             const isSelected = i === selectedIndex;
@@ -120,13 +125,15 @@ export function SearchBar({
                   onMouseEnter={() => setSelectedIndex(i)}
                   className={cn(
                     "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors",
-                    isSelected ? "bg-cyan-500/20 text-cyan-400" : "text-zinc-300 hover:bg-white/5"
+                    isSelected
+                      ? "bg-[var(--accent-1)]/15 text-[var(--accent-1)]"
+                      : "text-[var(--fg)] hover:bg-[var(--bg-elev-2)]",
                   )}
                 >
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--fg-dim)]" />
                   <div>
                     <p className="font-medium">{formatAddress(f)}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-[var(--fg-dim)]">
                       {f.properties.type} · {f.properties.country ?? ""}
                     </p>
                   </div>

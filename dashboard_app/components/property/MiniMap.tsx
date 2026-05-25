@@ -5,7 +5,21 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { OSM_STYLE } from "@/lib/map-style";
 
-export function MiniMap({ lng, lat }: { lng: number; lat: number }) {
+interface MiniMapProps {
+  lng: number;
+  lat: number;
+  zoom?: number;
+  className?: string;
+  showMarker?: boolean;
+}
+
+export function MiniMap({
+  lng,
+  lat,
+  zoom = 15,
+  className = "h-48 w-full overflow-hidden rounded-xl border border-[var(--border)]",
+  showMarker = true,
+}: MiniMapProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -14,12 +28,15 @@ export function MiniMap({ lng, lat }: { lng: number; lat: number }) {
       container: ref.current,
       style: OSM_STYLE as unknown as maplibregl.StyleSpecification,
       center: [lng, lat],
-      zoom: 15,
+      zoom,
       interactive: false,
+      attributionControl: false,
     });
-    new maplibregl.Marker({ color: "#06b6d4" }).setLngLat([lng, lat]).addTo(m);
+    if (showMarker) {
+      new maplibregl.Marker({ color: "#38bdf8" }).setLngLat([lng, lat]).addTo(m);
+    }
     return () => m.remove();
-  }, [lng, lat]);
+  }, [lng, lat, zoom, showMarker]);
 
-  return <div ref={ref} className="h-48 w-full overflow-hidden rounded-xl border border-white/10" />;
+  return <div ref={ref} className={className} />;
 }
