@@ -5,13 +5,12 @@ import { useStatsSummary } from "@/hooks/useStatsSummary";
 import { GradientText } from "@/components/ui/GradientText";
 import { Pill } from "@/components/ui/Pill";
 import { useFiltersStore } from "@/lib/store/filters";
-import { formatNumber, humanizeAgo } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 
 export function Hero() {
   const filters = useFiltersStore((s) => s.filters);
   const { data } = useStatsSummary(filters);
   const cities = data?.distinct_cities_count;
-  const updated = data?.max_date ? humanizeAgo(data.max_date) : "live";
 
   return (
     <section className="relative overflow-hidden border-b border-[var(--border)]">
@@ -20,7 +19,7 @@ export function Hero() {
         <div className="absolute -right-32 top-40 h-96 w-96 rounded-full bg-[var(--accent-2)]/10 blur-3xl" />
       </div>
       <div className="relative px-6 py-16 sm:py-24">
-        <Pill tone="live">Live · updated {updated}</Pill>
+        <Pill tone="live">Live</Pill>
         <h1 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight text-[var(--fg)] sm:text-5xl md:text-6xl">
           Israel’s housing market,
           <br />
