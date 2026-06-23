@@ -58,6 +58,9 @@ services:
     environment:
       CHAMPION_MODEL: ${CHAMPION_MODEL:-moses/lightgbm_v1}
       ARTIFACTS_DIR: /app/artifacts
+      # "Compare all models" loads all 20 models; keep them all cached so repeat
+      # compares don't re-load the big artifacts (e.g. the 678MB random forest).
+      MODEL_CACHE_SIZE: ${MODEL_CACHE_SIZE:-24}
     volumes:
       - ./prediction_service/artifacts:/app/artifacts:ro
       - processing_outputs:/app/data:ro
@@ -85,7 +88,10 @@ services:
       MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
       DB_NAME: ${DB_NAME:-israel_housing}
       FEATURES_COLLECTION: ${FEATURES_COLLECTION:-normalized_records}
-      PREDICTION_SERVICE_URL: http://prediction_service:8002
+      PREDICTION_SERVICE_URL: ${PREDICTION_SERVICE_URL:-http://prediction_service:8002}
+      # First "compare all" is a cold load of 20 models (torch + a 678MB RF), so
+      # allow well over the 30s default before the proxy gives up.
+      PREDICTION_SERVICE_TIMEOUT_S: ${PREDICTION_SERVICE_TIMEOUT_S:-180}
     depends_on:
       mongo:
         condition: service_healthy
