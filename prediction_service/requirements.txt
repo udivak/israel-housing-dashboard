@@ -1,8 +1,10 @@
 pandas>=2.0
 numpy>=1.24
-scikit-learn>=1.4
+scikit-learn>=1.8  # artifacts pickled with 1.8.0; <1.8 emits InconsistentVersionWarning
 lightgbm>=4.0
 xgboost>=2.0
+catboost>=1.2  # catboost_v1, stacked_v1/v2
+torch>=2.0  # nn_v1..v4, blend_v1 (CPU inference)
 joblib>=1.3
 fastapi>=0.110
 uvicorn[standard]>=0.27

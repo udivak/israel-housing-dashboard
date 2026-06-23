@@ -10,19 +10,32 @@ FastAPI — multi-model prediction service.
 
 from __future__ import annotations
 
+import os
+
+# macOS: lightgbm/xgboost/catboost/torch each bundle their own OpenMP runtime.
+# Loading several in one process aborts with "OMP: Error #15"; allowing the
+# duplicate (KMP_DUPLICATE_LIB_OK) then *deadlocks* at the OMP fork barrier when
+# torch meets the tree libs. Pinning OMP to a single thread removes the worker
+# pool (and the barrier) — and is free for 1-row inference. Must run before any of
+# those libs are first imported (they load lazily when models are unpickled).
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+
+import importlib
 import json
 import logging
 import math
-import os
 import statistics
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import joblib
-import pandas as pd
+import numpy as np
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
+
+from common.serving import build_serving_frame
 
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS_DIR = Path(os.getenv("ARTIFACTS_DIR", str(ROOT / "artifacts")))
@@ -96,19 +109,13 @@ def _read_json(path: Path) -> dict[str, Any] | None:
 
 
 @lru_cache(maxsize=MODEL_CACHE_SIZE)
-def _load_model(model_id: str) -> tuple[Any, list[str] | None]:
+def _load_model(model_id: str) -> Any:
     path = _model_dir(model_id) / "model.joblib"
     if not path.exists():
         raise FileNotFoundError(f"Model artifact not found: {path}")
     model = joblib.load(path)
-    feature_names: list[str] | None = None
-    for attr in ("feature_name_", "feature_names_in_", "feature_names_"):
-        names = getattr(model, attr, None)
-        if names is not None:
-            feature_names = list(names)
-            break
-    logger.info("Loaded model=%s n_features=%s", model_id, len(feature_names or []))
-    return model, feature_names
+    logger.info("Loaded model=%s type=%s", model_id, type(model).__name__)
+    return model
 
 
 def _list_available_models() -> list[ModelInfo]:
@@ -136,33 +143,41 @@ def _list_available_models() -> list[ModelInfo]:
     return out
 
 
+def _data_version(model_id: str) -> str:
+    """moses/* models train on data.py (v1); udi/* on data_v2.py (v2)."""
+    return "v1" if model_id.split("/", 1)[0] == "moses" else "v2"
+
+
+@lru_cache(maxsize=1)
+def _base_columns() -> dict[str, list[str] | None]:
+    """Per-data-version base feature lists, proxied from a full-base Class-A model.
+
+    Models with an internal feature builder (KNN etc.) are fed this base frame and
+    append their own engineered columns inside predict(); see common.serving.
+    """
+    out: dict[str, list[str] | None] = {"v1": None, "v2": None}
+    try:
+        out["v1"] = list(_load_model("moses/lightgbm_tuned").feature_name_)
+    except Exception:
+        logger.exception("Could not load v1 base schema (moses/lightgbm_tuned)")
+    try:
+        out["v2"] = list(_load_model("udi/xgboost_v1").feature_names_in_)
+    except Exception:
+        logger.exception("Could not load v2 base schema (udi/xgboost_v1)")
+    return out
+
+
 def _predict_one(model_id: str, features: dict[str, Any]) -> float:
-    model, feature_names = _load_model(model_id)
-    df = pd.DataFrame([features])
-    if feature_names is not None:
-        for col in feature_names:
-            if col not in df.columns:
-                df[col] = None
-        df = df[feature_names]
+    owner, name = model_id.split("/", 1)
+    # Importing the model module also runs the @register_model decorators that
+    # populate the NN class registry used by load_bundle().
+    mod = importlib.import_module(f"models.{owner}.{name}")
+    artifact = _load_model(model_id)
 
-    # Restore pandas categorical dtypes that LightGBM stores in the booster.
-    # Without this, object-dtype columns trigger "categorical_feature do not match".
-    booster = getattr(model, "booster_", None)
-    if booster is not None:
-        pandas_cats = booster.dump_model().get("pandas_categorical", [])
-        cat_iter = iter(pandas_cats)
-        for col in df.columns:
-            if df[col].dtype == object:
-                try:
-                    df[col] = pd.Categorical(df[col], categories=next(cat_iter))
-                except StopIteration:
-                    df[col] = pd.to_numeric(df[col], errors="coerce")
+    base_cols = _base_columns().get(_data_version(model_id))
+    df = build_serving_frame(artifact, features, base_columns=base_cols)
 
-    # Coerce any remaining object columns (missing numerics filled as None) to float.
-    for col in df.select_dtypes("object").columns:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-
-    raw = float(model.predict(df)[0])
+    raw = float(np.asarray(mod.predict(artifact, df)).ravel()[0])
 
     # Some models predict raw price in ILS rather than log-price.
     # Normalise to log-price so the API contract is consistent.

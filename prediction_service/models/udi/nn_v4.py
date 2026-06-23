@@ -504,7 +504,9 @@ def predict(bundle: dict[str, Any], X: pd.DataFrame) -> np.ndarray:
             num_chunk = x_num_t[start : start + PREDICT_CHUNK]
             cat_chunk = x_cat_t[start : start + PREDICT_CHUNK]
             out = model(num_chunk, cat_chunk).squeeze(-1)
-            preds_std.append(out.detach().cpu().numpy())
+            # squeeze(-1) collapses a batch of 1 (single-row serving) to a 0-d
+            # scalar, which np.concatenate below rejects; keep it at least 1-D.
+            preds_std.append(np.atleast_1d(out.detach().cpu().numpy()))
 
     pred_std_arr = (
         np.concatenate(preds_std, axis=0)
