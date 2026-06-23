@@ -108,12 +108,50 @@ def _read_json(path: Path) -> dict[str, Any] | None:
         return None
 
 
+def _patch_sklearn_compat(obj: Any, _seen: set[int] | None = None, _depth: int = 0) -> None:
+    """Alias ``SimpleImputer._fit_dtype`` → ``_fill_dtype`` in a loaded artifact.
+
+    Our artifacts are pickled with mixed scikit-learn versions: most udi/* models
+    (nn_*, blend_v1, random_forest_v1, xgboost_v1) with 1.7.x, random_forest_v2 with
+    1.8.0. sklearn renamed this fitted attr in 1.8, so 1.7.x-pickled imputers crash in
+    ``transform()`` ("object has no attribute '_fill_dtype'") under the pinned 1.8.0.
+    The two attrs hold the same value (fit-time dtype), so aliasing is exact.
+
+    ponytail: covers only this one documented 1.7→1.8 rename. If a future sklearn bump
+    renames more fitted attrs, re-pickle the artifacts to a single version instead.
+    """
+    from sklearn.impute import SimpleImputer
+
+    if _seen is None:
+        _seen = set()
+    if _depth > 25 or id(obj) in _seen:
+        return
+    _seen.add(id(obj))
+    if isinstance(obj, SimpleImputer):
+        if not hasattr(obj, "_fill_dtype") and hasattr(obj, "_fit_dtype"):
+            obj._fill_dtype = obj._fit_dtype
+        return
+    if isinstance(obj, (str, bytes, int, float, bool, type(None), np.ndarray)):
+        return
+    children: list[Any] = []
+    state = getattr(obj, "__dict__", None)
+    if state:
+        children += state.values()
+    if isinstance(obj, dict):
+        children += obj.values()
+    elif isinstance(obj, (list, tuple, set)):
+        children += list(obj)
+    for child in children:
+        _patch_sklearn_compat(child, _seen, _depth + 1)
+
+
 @lru_cache(maxsize=MODEL_CACHE_SIZE)
 def _load_model(model_id: str) -> Any:
     path = _model_dir(model_id) / "model.joblib"
     if not path.exists():
         raise FileNotFoundError(f"Model artifact not found: {path}")
     model = joblib.load(path)
+    _patch_sklearn_compat(model)
     logger.info("Loaded model=%s type=%s", model_id, type(model).__name__)
     return model
 

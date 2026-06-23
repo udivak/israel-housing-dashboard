@@ -25,7 +25,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import optuna  # pyright: ignore[reportMissingImports]
 import pandas as pd
 from sklearn.cluster import KMeans  # pyright: ignore[reportMissingImports]
 from sklearn.model_selection import KFold  # pyright: ignore[reportMissingImports]
@@ -423,6 +422,8 @@ def train(
     """Optuna sweep על train+val (90%), ואז refit על אותם 90%; test 10%
     נשאר נפרד וה-runner קורא ל-predict עליו אחרי שהפונקציה מסתיימת.
     """
+    import optuna  # training-only dep; kept out of module scope so serve-time import works
+
     # 1. מאחדים train+val ל-objective (val כבר 10% מתוך 90% של המסד).
     X_combined = pd.concat([X_train, X_val], axis=0).reset_index(drop=True)
     y_combined = np.concatenate([y_train, y_val]).astype(float)
