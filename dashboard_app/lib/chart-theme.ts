@@ -34,6 +34,10 @@ export const tooltipStyle = {
   fontSize: 12,
 };
 
+// Recharts colors each tooltip item inline (defaults to #000 for pie slices),
+// overriding contentStyle.color — so force the item text light too.
+export const tooltipItemStyle = { color: CHART_COLORS.fg };
+
 export const axisProps = {
   stroke: CHART_COLORS.axis,
   tick: { fill: CHART_COLORS.axisLabel, fontSize: 11 },

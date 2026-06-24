@@ -241,3 +241,9 @@ pre_processing/outputs/
 *.xls
 *.csv
 *.parquet
+
+# AI skill scratch / generated artifacts (superpowers, brainstorm specs, stats guide)
+.superpowers/
+docs/superpowers/
+stats-guide.html
+.claude/

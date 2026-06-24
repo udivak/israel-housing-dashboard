@@ -4,7 +4,9 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { usePropertyTypeBreakdown, useSourceBreakdown } from "@/hooks/useStats";
 import { ChartCard, fmtNum } from "./ChartCard";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
-import { CHART_SERIES, tooltipStyle } from "@/lib/chart-theme";
+import { CHART_SERIES, tooltipStyle, tooltipItemStyle } from "@/lib/chart-theme";
+
+const pct = (v: number, total: number) => (total ? `${((v / total) * 100).toFixed(1)}%` : "0%");
 
 export function SourceBreakdown() {
   const { data = [], isLoading } = useSourceBreakdown();
@@ -33,7 +35,8 @@ export function SourceBreakdown() {
               </Pie>
               <Tooltip
                 contentStyle={tooltipStyle}
-                formatter={(v: number, n) => [fmtNum(v), n]}
+                itemStyle={tooltipItemStyle}
+                formatter={(v: number, n) => [`${fmtNum(v)} (${pct(v, total)})`, n]}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -59,6 +62,7 @@ export function PropertyTypeBreakdown({ city }: { city?: string }) {
   const { data = [], isLoading } = usePropertyTypeBreakdown(city);
   const { t } = useLocale();
   const top = data.slice(0, 8);
+  const total = top.reduce((s, r) => s + r.count, 0);
 
   return (
     <ChartCard title={t("chart.byPropertyType")} subtitle={city ?? t("chart.countryWide")} className="h-72">
@@ -82,7 +86,8 @@ export function PropertyTypeBreakdown({ city }: { city?: string }) {
               </Pie>
               <Tooltip
                 contentStyle={tooltipStyle}
-                formatter={(v: number, n) => [fmtNum(v), n]}
+                itemStyle={tooltipItemStyle}
+                formatter={(v: number, n) => [`${fmtNum(v)} (${pct(v, total)})`, n]}
               />
             </PieChart>
           </ResponsiveContainer>
