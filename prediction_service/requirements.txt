@@ -1,6 +1,7 @@
 pandas>=2.0
 numpy>=1.24
-scikit-learn>=1.8  # artifacts pickled with 1.8.0; <1.8 emits InconsistentVersionWarning
+scikit-learn==1.8.0  # artifacts pickled mixed 1.7.x/1.8.0; 1.9 renamed SimpleImputer attr (see serve._patch_sklearn_compat)
+pyarrow>=14  # random_forest_v2 artifact carries pyarrow-backed dtypes (pandas 3.0)
 lightgbm>=4.0
 xgboost>=2.0
 catboost>=1.2  # catboost_v1, stacked_v1/v2
