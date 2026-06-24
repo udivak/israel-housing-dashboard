@@ -12,28 +12,37 @@ import { Card } from "@/components/ui/card";
 import { Section } from "@/components/ui/Section";
 import { GradientText } from "@/components/ui/GradientText";
 import { Pill } from "@/components/ui/Pill";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
+import type { Messages } from "@/lib/i18n/en";
 import { formatCurrency } from "@/lib/format";
 
 interface FieldDef {
   key: string;
-  label: string;
+  labelKey: keyof Messages;
   type?: "number" | "text";
   step?: string;
   defaultValue?: string;
-  hint?: string;
+  hintKey?: keyof Messages;
 }
 
 const FIELDS: FieldDef[] = [
-  { key: "area_sqm", label: "Area (m²)", type: "number", defaultValue: "100" },
-  { key: "rooms", label: "Rooms", type: "number", step: "0.5", defaultValue: "4" },
-  { key: "floor", label: "Floor", type: "number", defaultValue: "3" },
-  { key: "building_floors", label: "Building floors", type: "number", defaultValue: "8" },
-  { key: "year_built", label: "Year built", type: "number", defaultValue: "2010" },
-  { key: "property_age", label: "Property age (yr)", type: "number", defaultValue: "15" },
-  { key: "year", label: "Transaction year", type: "number", defaultValue: "2024" },
-  { key: "month", label: "Month (1–12)", type: "number", defaultValue: "6" },
-  { key: "quarter", label: "Quarter (1–4)", type: "number", defaultValue: "2" },
-  { key: "log_area_sqm", label: "log(area)", type: "number", step: "0.001", defaultValue: "4.605", hint: "= ln(area_sqm)" },
+  { key: "area_sqm", labelKey: "pg.field.area", type: "number", defaultValue: "100" },
+  { key: "rooms", labelKey: "pg.field.rooms", type: "number", step: "0.5", defaultValue: "4" },
+  { key: "floor", labelKey: "pg.field.floor", type: "number", defaultValue: "3" },
+  { key: "building_floors", labelKey: "pg.field.buildingFloors", type: "number", defaultValue: "8" },
+  { key: "year_built", labelKey: "pg.field.yearBuilt", type: "number", defaultValue: "2010" },
+  { key: "property_age", labelKey: "pg.field.propertyAge", type: "number", defaultValue: "15" },
+  { key: "year", labelKey: "pg.field.year", type: "number", defaultValue: "2024" },
+  { key: "month", labelKey: "pg.field.month", type: "number", defaultValue: "6" },
+  { key: "quarter", labelKey: "pg.field.quarter", type: "number", defaultValue: "2" },
+  {
+    key: "log_area_sqm",
+    labelKey: "pg.field.logArea",
+    type: "number",
+    step: "0.001",
+    defaultValue: "4.605",
+    hintKey: "pg.field.logAreaHint",
+  },
 ];
 
 interface PredictResponse {
@@ -57,6 +66,7 @@ interface CompareResponse {
 
 export function PredictPlayground() {
   const { data: models = [] } = useModels();
+  const { t } = useLocale();
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(FIELDS.map((f) => [f.key, f.defaultValue ?? ""])),
   );
@@ -82,7 +92,7 @@ export function PredictPlayground() {
       const features = await searchPlaces(address, { limit: 1 });
       const f = features[0];
       if (!f) {
-        setGeocodeError("Address not found");
+        setGeocodeError(t("pg.addressNotFound"));
         setResolved(null);
       } else {
         const [lon, lat] = f.geometry.coordinates;
@@ -96,7 +106,7 @@ export function PredictPlayground() {
         });
       }
     } catch {
-      setGeocodeError("Geocoding error");
+      setGeocodeError(t("pg.geocodingError"));
     } finally {
       setGeocoding(false);
     }
@@ -144,16 +154,12 @@ export function PredictPlayground() {
   };
 
   return (
-    <Section
-      title="Playground"
-      subtitle="Tune features by hand, swap models, and stress-test the ensemble."
-      eyebrow="Predict"
-    >
+    <Section title={t("pg.title")} subtitle={t("pg.subtitle")} eyebrow={t("pg.eyebrow")}>
       <Card className="space-y-5 p-5">
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-medium text-[var(--fg-muted)]">
             <MapPin className="h-3.5 w-3.5 text-[var(--accent-1)]" />
-            Property address
+            {t("pg.addressSection")}
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <input
@@ -161,7 +167,7 @@ export function PredictPlayground() {
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleGeocode()}
-              placeholder="e.g., Rothschild 22, Tel Aviv"
+              placeholder={t("pg.addressPlaceholder")}
               className="flex-1 rounded-md border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--fg)] placeholder:text-[var(--fg-dim)] focus:border-[var(--accent-1)]/50 focus:outline-none"
             />
             <button
@@ -170,7 +176,7 @@ export function PredictPlayground() {
               className="flex items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--fg)] hover:border-[var(--border-strong)] disabled:opacity-50"
             >
               {geocoding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
-              Search
+              {t("pg.search")}
             </button>
           </div>
           {resolved && (
@@ -191,7 +197,7 @@ export function PredictPlayground() {
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
           {FIELDS.map((f) => (
             <label key={f.key} className="flex flex-col gap-1 text-xs">
-              <span className="text-[var(--fg-muted)]">{f.label}</span>
+              <span className="text-[var(--fg-muted)]">{t(f.labelKey)}</span>
               <input
                 type={f.type ?? "text"}
                 step={f.step}
@@ -199,7 +205,7 @@ export function PredictPlayground() {
                 onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
                 className="tabular w-full rounded-md border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--fg)] focus:border-[var(--accent-1)]/50 focus:outline-none"
               />
-              {f.hint && <span className="text-[10px] text-[var(--fg-dim)]">{f.hint}</span>}
+              {f.hintKey && <span className="text-[10px] text-[var(--fg-dim)]">{t(f.hintKey)}</span>}
             </label>
           ))}
         </div>
@@ -212,7 +218,7 @@ export function PredictPlayground() {
               onChange={(e) => setCompareMode(e.target.checked)}
               className="h-3.5 w-3.5 accent-[var(--accent-1)]"
             />
-            Compare all models
+            {t("pg.compareAll")}
           </label>
           {!compareMode && (
             <select
@@ -220,7 +226,7 @@ export function PredictPlayground() {
               onChange={(e) => setSelectedModel(e.target.value)}
               className="rounded-md border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--fg)]"
             >
-              <option value="">Champion (default)</option>
+              <option value="">{t("pg.champion")}</option>
               {models.map((m) => (
                 <option key={m.id} value={m.id}>
                   {modelDisplayName(m.id)}
@@ -240,14 +246,14 @@ export function PredictPlayground() {
             ) : (
               <Brain className="h-4 w-4" />
             )}
-            {compareMode ? "Run all" : "Predict"}
+            {compareMode ? t("pg.runAll") : t("pg.predict")}
           </button>
         </div>
 
         {!compareMode && single.data && (
           <div className="rounded-lg border border-[var(--accent-1)]/30 bg-[var(--bg)] p-4">
             <div className="text-xs uppercase tracking-wide text-[var(--fg-dim)]">
-              Predicted · {modelDisplayName(single.data.model)}
+              {t("pg.predicted", { model: modelDisplayName(single.data.model) })}
             </div>
             <div className="tabular mt-1 text-3xl font-semibold">
               <GradientText>{formatCurrency(single.data.predicted_price)}</GradientText>
@@ -260,14 +266,16 @@ export function PredictPlayground() {
             {compare.data.consensus_price != null && (
               <div className="rounded-lg border border-[var(--accent-2)]/30 bg-[var(--bg)] p-4">
                 <div className="text-xs uppercase tracking-wide text-[var(--fg-dim)]">
-                  Consensus (median)
+                  {t("pg.consensus")}
                 </div>
                 <div className="tabular mt-1 text-3xl font-semibold">
                   <GradientText>{formatCurrency(compare.data.consensus_price)}</GradientText>
                 </div>
                 <div className="tabular mt-1 text-xs text-[var(--fg-dim)]">
-                  spread {formatCurrency(compare.data.spread_price)} · stddev{" "}
-                  {formatCurrency(compare.data.stddev_price)}
+                  {t("pg.spreadStddev", {
+                    spread: formatCurrency(compare.data.spread_price),
+                    stddev: formatCurrency(compare.data.stddev_price),
+                  })}
                 </div>
               </div>
             )}
@@ -279,7 +287,7 @@ export function PredictPlayground() {
                 >
                   <span className="text-[var(--fg-muted)]">{modelDisplayName(it.model)}</span>
                   {it.error ? (
-                    <Pill tone="down">error</Pill>
+                    <Pill tone="down">{t("common.error")}</Pill>
                   ) : (
                     <span className="tabular font-medium text-[var(--fg)]">
                       {formatCurrency(it.predicted_price)}
@@ -293,7 +301,7 @@ export function PredictPlayground() {
 
         {(single.isError || compare.isError) && (
           <div className="rounded-md border border-[var(--down)]/30 bg-[var(--down)]/10 p-3 text-xs text-[var(--down)]">
-            Prediction error. Check that prediction_service is running and a champion model is set.
+            {t("pg.predictionError")}
           </div>
         )}
       </Card>

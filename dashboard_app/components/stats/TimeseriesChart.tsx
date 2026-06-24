@@ -12,22 +12,25 @@ import {
 } from "recharts";
 import { useTimeseries } from "@/hooks/useStats";
 import { ChartCard, fmtNum } from "./ChartCard";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
+import type { Messages } from "@/lib/i18n/en";
 import { CHART_COLORS, axisProps, gridProps, tooltipStyle } from "@/lib/chart-theme";
 
-const grans = [
-  { value: "month" as const, label: "Month" },
-  { value: "quarter" as const, label: "Quarter" },
-  { value: "year" as const, label: "Year" },
+const grans: { value: "month" | "quarter" | "year"; key: keyof Messages }[] = [
+  { value: "month", key: "chart.month" },
+  { value: "quarter", key: "chart.quarter" },
+  { value: "year", key: "chart.year" },
 ];
 
 export function TimeseriesChart({ city }: { city?: string }) {
   const [granularity, setGranularity] = useState<"month" | "quarter" | "year">("year");
   const { data = [], isLoading } = useTimeseries(granularity, city);
+  const { t } = useLocale();
 
   return (
     <ChartCard
-      title="Average price over time"
-      subtitle={city ? city : "Country-wide"}
+      title={t("chart.timeseriesTitle")}
+      subtitle={city ? city : t("chart.countryWide")}
       className="h-80"
     >
       <div className="mb-2 flex gap-1">
@@ -41,12 +44,12 @@ export function TimeseriesChart({ city }: { city?: string }) {
                 : "text-[var(--fg-muted)] hover:bg-[var(--bg-elev-2)]"
             }`}
           >
-            {g.label}
+            {t(g.key)}
           </button>
         ))}
       </div>
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center text-xs text-[var(--fg-dim)]">Loading…</div>
+        <div className="flex h-48 items-center justify-center text-xs text-[var(--fg-dim)]">{t("common.loading")}</div>
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
@@ -63,7 +66,7 @@ export function TimeseriesChart({ city }: { city?: string }) {
               stroke={CHART_COLORS.accent1}
               strokeWidth={2}
               dot={false}
-              name="Avg price"
+              name={t("kpi.avgPrice")}
             />
             <Line
               type="monotone"
@@ -71,7 +74,7 @@ export function TimeseriesChart({ city }: { city?: string }) {
               stroke={CHART_COLORS.accent2}
               strokeWidth={2}
               dot={false}
-              name="₪/m²"
+              name={t("property.pricePerSqm")}
             />
           </LineChart>
         </ResponsiveContainer>

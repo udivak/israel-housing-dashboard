@@ -3,14 +3,20 @@
 import dynamic from "next/dynamic";
 import { FilterSidebar } from "./FilterSidebar";
 import { KpiStrip } from "./KpiStrip";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
+
+function MapLoading() {
+  const { t } = useLocale();
+  return (
+    <div className="flex h-full w-full items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg-elev)]">
+      <div className="text-sm text-[var(--fg-muted)]">{t("map.loading")}</div>
+    </div>
+  );
+}
 
 const LiveMap = dynamic(() => import("./LiveMap").then((m) => m.LiveMap), {
   ssr: false,
-  loading: () => (
-    <div className="flex h-full w-full items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg-elev)]">
-      <div className="text-sm text-[var(--fg-muted)]">Loading map…</div>
-    </div>
-  ),
+  loading: () => <MapLoading />,
 });
 
 export function MapPageClient() {

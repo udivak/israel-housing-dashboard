@@ -3,16 +3,34 @@
 import { useFiltersStore } from "@/lib/store/filters";
 import { Filter, X } from "lucide-react";
 import { Pill } from "@/components/ui/Pill";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
+import type { Messages } from "@/lib/i18n/en";
 import type { MapFilters } from "@/lib/api/types";
 
-const PROPERTY_TYPES = [
-  { value: "דירה", label: "Apartment" },
-  { value: "דירה בבית קומות", label: "Apartment in tower" },
-  { value: "קוטג'", label: "Cottage" },
-  { value: "פנטהאוז", label: "Penthouse" },
-  { value: "דופלקס", label: "Duplex" },
-  { value: "דירת גן", label: "Garden apartment" },
+// value = Hebrew DB value (sent to API); key resolves to the localized label.
+const PROPERTY_TYPES: { value: string; key: keyof Messages }[] = [
+  { value: "דירה", key: "ptype.apartment" },
+  { value: "דירה בבית קומות", key: "ptype.apartmentTower" },
+  { value: "קוטג'", key: "ptype.cottage" },
+  { value: "פנטהאוז", key: "ptype.penthouse" },
+  { value: "דופלקס", key: "ptype.duplex" },
+  { value: "דירת גן", key: "ptype.gardenApartment" },
 ];
+
+const ACTIVE_LABEL_KEYS: Partial<Record<keyof MapFilters, keyof Messages>> = {
+  city: "filters.active.city",
+  neighborhood: "filters.active.neighborhood",
+  min_price: "filters.active.minPrice",
+  max_price: "filters.active.maxPrice",
+  min_rooms: "filters.active.minRooms",
+  max_rooms: "filters.active.maxRooms",
+  min_area: "filters.active.minArea",
+  max_area: "filters.active.maxArea",
+  from_date: "filters.active.fromDate",
+  to_date: "filters.active.toDate",
+  property_type: "filters.active.propertyType",
+  source: "filters.active.source",
+};
 
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -37,25 +55,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const inputCls =
   "w-full rounded-md border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--fg)] placeholder:text-[var(--fg-dim)] focus:border-[var(--accent-1)]/50 focus:outline-none";
 
-const ACTIVE_LABELS: Partial<Record<keyof MapFilters, (v: unknown) => string>> = {
-  city: (v) => `City: ${v}`,
-  neighborhood: (v) => `Neighborhood: ${v}`,
-  min_price: (v) => `≥ ₪${Number(v).toLocaleString()}`,
-  max_price: (v) => `≤ ₪${Number(v).toLocaleString()}`,
-  min_rooms: (v) => `≥ ${v} rooms`,
-  max_rooms: (v) => `≤ ${v} rooms`,
-  min_area: (v) => `≥ ${v}m²`,
-  max_area: (v) => `≤ ${v}m²`,
-  from_date: (v) => `From ${v}`,
-  to_date: (v) => `To ${v}`,
-  property_type: (v) => `Type: ${v}`,
-  source: (v) => `Source: ${v}`,
-};
-
 export function FilterSidebar() {
   const filters = useFiltersStore((s) => s.filters);
   const setFilters = useFiltersStore((s) => s.setFilters);
   const reset = useFiltersStore((s) => s.resetFilters);
+  const { t } = useLocale();
 
   const active = (Object.entries(filters) as [keyof MapFilters, unknown][])
     .filter(([, v]) => v !== undefined && v !== null && v !== "");
@@ -65,7 +69,7 @@ export function FilterSidebar() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-semibold text-[var(--fg)]">
           <Filter className="h-4 w-4 text-[var(--accent-1)]" />
-          Filters
+          {t("filters.title")}
         </div>
         <button
           onClick={reset}
@@ -73,50 +77,55 @@ export function FilterSidebar() {
           className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--fg-muted)] hover:bg-[var(--bg-elev-2)] hover:text-[var(--fg)] disabled:opacity-40"
         >
           <X className="h-3 w-3" />
-          Reset
+          {t("filters.reset")}
         </button>
       </div>
 
       {active.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {active.map(([k, v]) => (
-            <Pill key={k as string} tone="accent" className="gap-1">
-              {(ACTIVE_LABELS[k] ?? ((x) => `${k}: ${x}`))(v)}
-              <button
-                type="button"
-                onClick={() => setFilters({ [k]: undefined } as Partial<MapFilters>)}
-                className="rounded-full p-0.5 hover:bg-[var(--accent-1)]/20"
-                aria-label={`Clear ${k}`}
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </Pill>
-          ))}
+          {active.map(([k, v]) => {
+            const mk = ACTIVE_LABEL_KEYS[k];
+            const value =
+              k === "min_price" || k === "max_price" ? Number(v).toLocaleString() : String(v);
+            return (
+              <Pill key={k as string} tone="accent" className="gap-1">
+                {mk ? t(mk, { value }) : `${k}: ${String(v)}`}
+                <button
+                  type="button"
+                  onClick={() => setFilters({ [k]: undefined } as Partial<MapFilters>)}
+                  className="rounded-full p-0.5 hover:bg-[var(--accent-1)]/20"
+                  aria-label={t("filters.clear", { field: String(k) })}
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </Pill>
+            );
+          })}
         </div>
       )}
 
-      <Group label="Location">
-        <Field label="City">
+      <Group label={t("filters.group.location")}>
+        <Field label={t("filters.city")}>
           <input
             className={inputCls}
             value={filters.city ?? ""}
-            placeholder="All cities"
+            placeholder={t("filters.allCities")}
             onChange={(e) => setFilters({ city: e.target.value || undefined })}
           />
         </Field>
-        <Field label="Neighborhood">
+        <Field label={t("filters.neighborhood")}>
           <input
             className={inputCls}
             value={filters.neighborhood ?? ""}
-            placeholder="All neighborhoods"
+            placeholder={t("filters.allNeighborhoods")}
             onChange={(e) => setFilters({ neighborhood: e.target.value || undefined })}
           />
         </Field>
       </Group>
 
-      <Group label="Price (₪)">
+      <Group label={t("filters.group.price")}>
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Min">
+          <Field label={t("filters.min")}>
             <input
               type="number"
               className={`tabular ${inputCls}`}
@@ -126,7 +135,7 @@ export function FilterSidebar() {
               }
             />
           </Field>
-          <Field label="Max">
+          <Field label={t("filters.max")}>
             <input
               type="number"
               className={`tabular ${inputCls}`}
@@ -139,9 +148,9 @@ export function FilterSidebar() {
         </div>
       </Group>
 
-      <Group label="Size">
+      <Group label={t("filters.group.size")}>
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Min rooms">
+          <Field label={t("filters.minRooms")}>
             <input
               type="number"
               step="0.5"
@@ -152,7 +161,7 @@ export function FilterSidebar() {
               }
             />
           </Field>
-          <Field label="Max rooms">
+          <Field label={t("filters.maxRooms")}>
             <input
               type="number"
               step="0.5"
@@ -163,7 +172,7 @@ export function FilterSidebar() {
               }
             />
           </Field>
-          <Field label="Min m²">
+          <Field label={t("filters.minArea")}>
             <input
               type="number"
               className={`tabular ${inputCls}`}
@@ -173,7 +182,7 @@ export function FilterSidebar() {
               }
             />
           </Field>
-          <Field label="Max m²">
+          <Field label={t("filters.maxArea")}>
             <input
               type="number"
               className={`tabular ${inputCls}`}
@@ -186,9 +195,9 @@ export function FilterSidebar() {
         </div>
       </Group>
 
-      <Group label="Date">
+      <Group label={t("filters.group.date")}>
         <div className="grid grid-cols-2 gap-2">
-          <Field label="From">
+          <Field label={t("filters.from")}>
             <input
               type="date"
               className={inputCls}
@@ -196,7 +205,7 @@ export function FilterSidebar() {
               onChange={(e) => setFilters({ from_date: e.target.value || undefined })}
             />
           </Field>
-          <Field label="To">
+          <Field label={t("filters.to")}>
             <input
               type="date"
               className={inputCls}
@@ -207,28 +216,28 @@ export function FilterSidebar() {
         </div>
       </Group>
 
-      <Group label="Type & source">
-        <Field label="Property type">
+      <Group label={t("filters.group.typeSource")}>
+        <Field label={t("filters.propertyType")}>
           <select
             className={inputCls}
             value={filters.property_type ?? ""}
             onChange={(e) => setFilters({ property_type: e.target.value || undefined })}
           >
-            <option value="">All</option>
-            {PROPERTY_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
+            <option value="">{t("filters.all")}</option>
+            {PROPERTY_TYPES.map((pt) => (
+              <option key={pt.value} value={pt.value}>
+                {t(pt.key)}
               </option>
             ))}
           </select>
         </Field>
-        <Field label="Source">
+        <Field label={t("filters.source")}>
           <select
             className={inputCls}
             value={filters.source ?? ""}
             onChange={(e) => setFilters({ source: e.target.value || undefined })}
           >
-            <option value="">All</option>
+            <option value="">{t("filters.all")}</option>
             <option value="nadlan_gov">nadlan_gov</option>
             <option value="odata_il_nadlan">odata_il_nadlan</option>
             <option value="tax_authority_nadlan">tax_authority_nadlan</option>

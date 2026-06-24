@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Home } from "lucide-react";
 import { useSimilarProperties, type PropertyDoc } from "@/hooks/useProperty";
 import { Card } from "@/components/ui/card";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { formatCurrency, formatNumber } from "@/lib/format";
 
 function Sparkline({ values }: { values: number[] }) {
@@ -33,18 +34,19 @@ function Sparkline({ values }: { values: number[] }) {
 
 export function SimilarProperties({ id }: { id: string }) {
   const { data, isLoading } = useSimilarProperties(id, 800);
+  const { t } = useLocale();
 
   return (
     <Card>
       <div className="mb-3 flex items-center gap-2">
         <Home className="h-4 w-4 text-[var(--accent-1)]" />
-        <h3 className="text-sm font-semibold text-[var(--fg)]">Similar properties</h3>
-        <span className="text-xs text-[var(--fg-dim)]">within 800m</span>
+        <h3 className="text-sm font-semibold text-[var(--fg)]">{t("similar.title")}</h3>
+        <span className="text-xs text-[var(--fg-dim)]">{t("similar.within")}</span>
       </div>
       {isLoading ? (
-        <div className="text-xs text-[var(--fg-dim)]">Loading…</div>
+        <div className="text-xs text-[var(--fg-dim)]">{t("common.loading")}</div>
       ) : !data?.results.length ? (
-        <div className="text-xs text-[var(--fg-dim)]">No nearby properties found</div>
+        <div className="text-xs text-[var(--fg-dim)]">{t("similar.empty")}</div>
       ) : (
         <ul className="space-y-1">
           {data.results.slice(0, 8).map((p: PropertyDoc) => {
@@ -64,13 +66,13 @@ export function SimilarProperties({ id }: { id: string }) {
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[var(--fg)]">{p.neighborhood ?? p.city ?? "—"}</div>
                     <div className="tabular truncate text-[var(--fg-dim)]">
-                      {p.rooms ? `${formatNumber(p.rooms)} rm` : ""}
+                      {p.rooms ? t("similar.roomsShort", { count: formatNumber(p.rooms) }) : ""}
                       {p.rooms && p.area_sqm ? " · " : ""}
-                      {p.area_sqm ? `${formatNumber(p.area_sqm)} m²` : ""}
+                      {p.area_sqm ? `${formatNumber(p.area_sqm)} ${t("unit.sqm")}` : ""}
                     </div>
                   </div>
                   <Sparkline values={trail} />
-                  <div className="tabular w-24 text-right font-medium text-[var(--fg)]">
+                  <div className="tabular w-24 text-end font-medium text-[var(--fg)]">
                     {formatCurrency(p.price)}
                   </div>
                 </Link>

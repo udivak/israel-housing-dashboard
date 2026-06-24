@@ -9,6 +9,7 @@ import { PropertyPanel } from "./PropertyPanel";
 import { SearchBar } from "./SearchBar";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useMapData } from "@/hooks/useMapData";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { useFiltersStore, DEFAULT_VIEWPORT } from "@/lib/store/filters";
 import { OSM_STYLE } from "@/lib/map-style";
 import type { BBoxParams, PointFeature } from "@/lib/api/types";
@@ -25,6 +26,7 @@ export function LiveMap() {
   const setViewport = useFiltersStore((s) => s.setViewport);
   const filters = useFiltersStore((s) => s.filters);
   const searchParams = useSearchParams();
+  const { t } = useLocale();
 
   const debouncedBBox = useDebounce(bbox, 300);
   const debouncedZoom = useDebounce(zoom, 300);
@@ -133,19 +135,19 @@ export function LiveMap() {
   return (
     <div className="relative h-full min-h-[500px] w-full overflow-hidden rounded-xl border border-white/10">
       <div ref={containerRef} className="h-full w-full" style={{ background: "#1a1a1a" }} />
-      <div className="absolute right-3 top-3 z-10">
+      <div className="absolute end-3 top-3 z-10">
         <SearchBar onSelect={handleSearchSelect} />
       </div>
       <DeckOverlay map={map} data={data} onPointClick={setSelected} />
       <PropertyPanel point={selected} onClose={() => setSelected(null)} />
       {error && (
         <div className="absolute inset-x-3 top-3 z-20 rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-200">
-          Map error: {error}
+          {t("map.error", { value: error })}
         </div>
       )}
       {data?.type === "points" && data.truncated && (
-        <div className="absolute bottom-3 right-3 z-10 rounded-md bg-amber-500/90 px-2 py-1 text-xs text-zinc-900">
-          Showing up to 2,000 results — zoom in or add filters
+        <div className="absolute bottom-3 end-3 z-10 rounded-md bg-amber-500/90 px-2 py-1 text-xs text-zinc-900">
+          {t("map.truncated")}
         </div>
       )}
     </div>

@@ -8,8 +8,9 @@ import { GradientText } from "@/components/ui/GradientText";
 import { Pill } from "@/components/ui/Pill";
 import { fetchApi } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
-import { searchPlaces, formatAddress } from "@/lib/geocoding";
+import { searchPlaces } from "@/lib/geocoding";
 import { modelDisplayName } from "@/lib/model-utils";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { formatCurrency } from "@/lib/format";
 
 interface PredictResponse {
@@ -24,9 +25,9 @@ const DEFAULTS = {
   floor: "3",
 };
 
-const EXAMPLE = "Dizengoff 99, Tel Aviv";
-
 export function InlinePredict() {
+  const { t } = useLocale();
+  const example = t("home.predict.example");
   const [address, setAddress] = useState("");
   const [rooms, setRooms] = useState(DEFAULTS.rooms);
   const [area, setArea] = useState(DEFAULTS.area_sqm);
@@ -39,7 +40,7 @@ export function InlinePredict() {
       const places = address.trim() ? await searchPlaces(address, { limit: 1 }) : [];
       const place = places[0];
       if (address.trim() && !place) {
-        setGeoError(`Couldn’t locate "${address}".`);
+        setGeoError(t("home.predict.geoFail", { address }));
         throw new Error("geocode failed");
       }
       const features: Record<string, number | string> = {
@@ -68,8 +69,8 @@ export function InlinePredict() {
 
   return (
     <Section
-      title="Predict an apartment in 10 seconds"
-      subtitle="Try a real address. The model returns an estimate with a confidence range."
+      title={t("home.predict.title")}
+      subtitle={t("home.predict.subtitle")}
       className="border-b border-[var(--border)] px-6 py-12"
     >
       <div id="predict" className="rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] p-5">
@@ -81,20 +82,20 @@ export function InlinePredict() {
           className="grid gap-3 sm:grid-cols-[2fr_repeat(3,1fr)_auto]"
         >
           <label className="flex flex-col gap-1 text-xs">
-            <span className="text-[var(--fg-dim)]">Address</span>
+            <span className="text-[var(--fg-dim)]">{t("home.predict.address")}</span>
             <div className="flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 focus-within:border-[var(--accent-1)]/50">
               <MapPin className="h-3.5 w-3.5 text-[var(--fg-dim)]" />
               <input
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder={EXAMPLE}
+                placeholder={example}
                 className="flex-1 bg-transparent text-sm text-[var(--fg)] placeholder:text-[var(--fg-dim)] focus:outline-none"
               />
             </div>
           </label>
-          <NumField label="Rooms" value={rooms} onChange={setRooms} step="0.5" />
-          <NumField label="m²" value={area} onChange={setArea} />
-          <NumField label="Floor" value={floor} onChange={setFloor} />
+          <NumField label={t("property.rooms")} value={rooms} onChange={setRooms} step="0.5" />
+          <NumField label={t("unit.sqm")} value={area} onChange={setArea} />
+          <NumField label={t("pg.field.floor")} value={floor} onChange={setFloor} />
           <div className="flex flex-col justify-end">
             <button
               type="submit"
@@ -106,7 +107,7 @@ export function InlinePredict() {
               ) : (
                 <Sparkles className="h-4 w-4" />
               )}
-              Predict
+              {t("home.predict.cta")}
             </button>
           </div>
         </form>
@@ -115,10 +116,10 @@ export function InlinePredict() {
           {!predict.data && !predict.isPending && (
             <button
               type="button"
-              onClick={() => setAddress(EXAMPLE)}
+              onClick={() => setAddress(example)}
               className="rounded-full border border-[var(--border)] bg-[var(--bg)] px-3 py-1 text-[var(--fg-muted)] hover:border-[var(--border-strong)]"
             >
-              Try: {EXAMPLE}
+              {t("home.predict.try", { example })}
             </button>
           )}
           {geoError && <Pill tone="down">{geoError}</Pill>}
@@ -127,20 +128,22 @@ export function InlinePredict() {
         {predict.data && (
           <div className="mt-5 rounded-lg border border-[var(--accent-1)]/30 bg-[var(--bg-elev)] p-5">
             <div className="text-xs uppercase tracking-wide text-[var(--fg-dim)]">
-              Predicted price · {modelDisplayName(predict.data.model)}
+              {t("home.predict.resultLabel", { model: modelDisplayName(predict.data.model) })}
             </div>
             <div className="tabular mt-1 text-4xl font-semibold">
               <GradientText>{formatCurrency(predict.data.predicted_price)}</GradientText>
             </div>
             <div className="mt-1 text-xs text-[var(--fg-muted)]">
-              log-price {predict.data.predicted_log_price.toFixed(3)} · features auto-derived from your inputs
+              {t("home.predict.resultHint", {
+                value: predict.data.predicted_log_price.toFixed(3),
+              })}
             </div>
           </div>
         )}
 
         {predict.isError && !geoError && (
           <div className="mt-4 rounded-md border border-[var(--down)]/30 bg-[var(--down)]/10 p-3 text-xs text-[var(--down)]">
-            Prediction failed. Verify the prediction_service is running and a champion model is set.
+            {t("home.predict.error")}
           </div>
         )}
       </div>

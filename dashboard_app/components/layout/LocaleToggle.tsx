@@ -1,40 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
 
-const STORAGE_KEY = "ih:locale";
-type Locale = "en" | "he";
-
 export function LocaleToggle({ className }: { className?: string }) {
-  const [locale, setLocale] = useState<Locale>("en");
-
-  useEffect(() => {
-    try {
-      const stored = (window.localStorage.getItem(STORAGE_KEY) as Locale) ?? "en";
-      setLocale(stored);
-      document.documentElement.lang = stored;
-      document.documentElement.dir = stored === "he" ? "rtl" : "ltr";
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const choose = (next: Locale) => {
-    setLocale(next);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      /* ignore */
-    }
-    document.documentElement.lang = next;
-    document.documentElement.dir = next === "he" ? "rtl" : "ltr";
-  };
+  const { locale, setLocale, t } = useLocale();
 
   return (
     <div
       role="radiogroup"
-      aria-label="Language"
+      aria-label={t("toggle.aria")}
       className={cn(
         "inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--bg-elev)] p-0.5 text-xs font-medium",
         className,
@@ -43,7 +18,7 @@ export function LocaleToggle({ className }: { className?: string }) {
       <button
         role="radio"
         aria-checked={locale === "en"}
-        onClick={() => choose("en")}
+        onClick={() => setLocale("en")}
         className={cn(
           "rounded-full px-2.5 py-1 transition-colors",
           locale === "en"
@@ -56,7 +31,7 @@ export function LocaleToggle({ className }: { className?: string }) {
       <button
         role="radio"
         aria-checked={locale === "he"}
-        onClick={() => choose("he")}
+        onClick={() => setLocale("he")}
         className={cn(
           "rounded-full px-2.5 py-1 transition-colors",
           locale === "he"

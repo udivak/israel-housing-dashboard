@@ -4,6 +4,7 @@ import { Brain } from "lucide-react";
 import { useModels } from "@/hooks/useProperty";
 import { Pill } from "@/components/ui/Pill";
 import { modelDisplayName } from "@/lib/model-utils";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
 
 interface ModelGardenProps {
@@ -19,6 +20,7 @@ function readMetric(m: Record<string, unknown> | null | undefined, key: string):
 
 export function ModelGarden({ compact = false }: ModelGardenProps) {
   const { data: models = [], isLoading } = useModels();
+  const { t } = useLocale();
 
   if (isLoading) {
     return (
@@ -36,7 +38,7 @@ export function ModelGarden({ compact = false }: ModelGardenProps) {
   if (!models.length) {
     return (
       <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elev)] p-6 text-sm text-[var(--fg-muted)]">
-        No models available. Start the prediction_service to populate this list.
+        {t("models.empty")}
       </div>
     );
   }
@@ -68,20 +70,20 @@ export function ModelGarden({ compact = false }: ModelGardenProps) {
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-[var(--fg-dim)]">
                 <Brain className="h-3.5 w-3.5" />
-                model
+                {t("models.modelTag")}
               </div>
-              {isBest && <Pill tone="accent">★ best</Pill>}
+              {isBest && <Pill tone="accent">{t("models.best")}</Pill>}
             </div>
             <div className="mt-2 truncate text-sm font-semibold text-[var(--fg)]">
               {modelDisplayName(m.id)}
             </div>
             <div className="tabular mt-3 grid grid-cols-2 gap-2 text-xs">
               <div>
-                <div className="text-[var(--fg-dim)]">R²</div>
+                <div className="text-[var(--fg-dim)]">{t("metric.r2")}</div>
                 <div className="font-medium text-[var(--fg)]">{r2 != null ? r2.toFixed(3) : "—"}</div>
               </div>
               <div>
-                <div className="text-[var(--fg-dim)]">{mae != null ? "MAE" : "MAPE"}</div>
+                <div className="text-[var(--fg-dim)]">{mae != null ? t("metric.mae") : t("metric.mape")}</div>
                 <div className="font-medium text-[var(--fg)]">
                   {mae != null
                     ? mae.toLocaleString("en-US", { maximumFractionDigits: 0 })
