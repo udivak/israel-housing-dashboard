@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Search, MapPin, Loader2 } from "lucide-react";
 import { searchPlaces, formatAddress, type PhotonFeature } from "@/lib/geocoding";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
 
 interface SearchBarProps {
@@ -14,10 +15,12 @@ interface SearchBarProps {
 
 export function SearchBar({
   onSelect,
-  placeholder = "Search street, city, address...",
+  placeholder,
   className = "",
   inputClassName = "",
 }: SearchBarProps) {
+  const { t } = useLocale();
+  const ph = placeholder ?? t("search.placeholder");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PhotonFeature[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -94,21 +97,21 @@ export function SearchBar({
   return (
     <div ref={wrapperRef} className={cn("relative w-full max-w-xl", className)}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--fg-dim)]" />
+        <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--fg-dim)]" />
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => results.length > 0 && setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          placeholder={ph}
           className={cn(
             "w-full rounded-md border border-[var(--border)] bg-[var(--bg-elev)] py-3 pl-10 pr-10 text-sm text-[var(--fg)] placeholder:text-[var(--fg-dim)] focus:border-[var(--accent-1)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent-1)]/20",
             inputClassName,
           )}
         />
         {isLoading && (
-          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-[var(--accent-1)]" />
+          <Loader2 className="absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-[var(--accent-1)]" />
         )}
       </div>
 
@@ -124,7 +127,7 @@ export function SearchBar({
                   onClick={() => handleSelect(f)}
                   onMouseEnter={() => setSelectedIndex(i)}
                   className={cn(
-                    "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors",
+                    "flex w-full items-start gap-3 px-4 py-3 text-start transition-colors",
                     isSelected
                       ? "bg-[var(--accent-1)]/15 text-[var(--accent-1)]"
                       : "text-[var(--fg)] hover:bg-[var(--bg-elev-2)]",

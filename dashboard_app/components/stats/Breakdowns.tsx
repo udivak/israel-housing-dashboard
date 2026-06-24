@@ -3,16 +3,18 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { usePropertyTypeBreakdown, useSourceBreakdown } from "@/hooks/useStats";
 import { ChartCard, fmtNum } from "./ChartCard";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { CHART_SERIES, tooltipStyle } from "@/lib/chart-theme";
 
 export function SourceBreakdown() {
   const { data = [], isLoading } = useSourceBreakdown();
+  const { t } = useLocale();
   const total = data.reduce((s, r) => s + r.count, 0);
 
   return (
-    <ChartCard title="By source" subtitle={`${fmtNum(total)} records`} className="h-72">
+    <ChartCard title={t("chart.bySource")} subtitle={t("chart.records", { count: fmtNum(total) })} className="h-72">
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center text-xs text-[var(--fg-dim)]">Loading…</div>
+        <div className="flex h-48 items-center justify-center text-xs text-[var(--fg-dim)]">{t("common.loading")}</div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <ResponsiveContainer width="100%" height={200}>
@@ -55,12 +57,13 @@ export function SourceBreakdown() {
 
 export function PropertyTypeBreakdown({ city }: { city?: string }) {
   const { data = [], isLoading } = usePropertyTypeBreakdown(city);
+  const { t } = useLocale();
   const top = data.slice(0, 8);
 
   return (
-    <ChartCard title="By property type" subtitle={city ?? "Country-wide"} className="h-72">
+    <ChartCard title={t("chart.byPropertyType")} subtitle={city ?? t("chart.countryWide")} className="h-72">
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center text-xs text-[var(--fg-dim)]">Loading…</div>
+        <div className="flex h-48 items-center justify-center text-xs text-[var(--fg-dim)]">{t("common.loading")}</div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <ResponsiveContainer width="100%" height={200}>

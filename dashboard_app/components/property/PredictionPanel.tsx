@@ -11,6 +11,7 @@ import { modelDisplayName } from "@/lib/model-utils";
 import { Card } from "@/components/ui/card";
 import { GradientText } from "@/components/ui/GradientText";
 import { Pill } from "@/components/ui/Pill";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { formatCurrency } from "@/lib/format";
 
 interface PredictResponse {
@@ -71,6 +72,7 @@ function buildFeatureDict(p: PropertyDoc): Record<string, unknown> {
 
 export function PredictionPanel({ property }: { property: PropertyDoc }) {
   const { data: models = [] } = useModels();
+  const { t } = useLocale();
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [showAll, setShowAll] = useState(false);
 
@@ -119,7 +121,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
     <Card className="space-y-4">
       <div className="flex items-center gap-2">
         <Brain className="h-4 w-4 text-[var(--accent-1)]" />
-        <h3 className="text-sm font-semibold text-[var(--fg)]">Price prediction</h3>
+        <h3 className="text-sm font-semibold text-[var(--fg)]">{t("ai.title")}</h3>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -128,7 +130,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
           onChange={(e) => setSelectedModel(e.target.value)}
           className="rounded-md border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--fg)]"
         >
-          <option value="">Champion (default)</option>
+          <option value="">{t("pg.champion")}</option>
           {models.map((m) => (
             <option key={m.id} value={m.id}>
               {modelDisplayName(m.id)}
@@ -145,7 +147,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
           ) : (
             <Brain className="h-4 w-4" />
           )}
-          Predict
+          {t("pg.predict")}
         </button>
       </div>
 
@@ -153,13 +155,13 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
         <div className="rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <div className="text-xs uppercase tracking-wide text-[var(--fg-dim)]">Predicted</div>
+              <div className="text-xs uppercase tracking-wide text-[var(--fg-dim)]">{t("prediction.predicted")}</div>
               <div className="tabular mt-1 text-xl font-semibold">
                 <GradientText>{formatCurrency(predicted)}</GradientText>
               </div>
             </div>
             <div>
-              <div className="text-xs uppercase tracking-wide text-[var(--fg-dim)]">Listed</div>
+              <div className="text-xs uppercase tracking-wide text-[var(--fg-dim)]">{t("prediction.listed")}</div>
               <div className="tabular mt-1 text-xl font-semibold text-[var(--fg)]">
                 {formatCurrency(listed)}
               </div>
@@ -168,15 +170,14 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
           {delta != null && (
             <div className="mt-2 text-xs">
               <Pill tone={delta >= 0 ? "up" : "down"}>
-                {delta >= 0 ? "+" : ""}
-                {delta.toFixed(1)}% vs listed
+                {t("prediction.vsListed", { delta: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}` })}
               </Pill>
             </div>
           )}
           {confidencePct != null && (
             <div className="mt-3">
               <div className="mb-1 flex items-center justify-between text-[11px] text-[var(--fg-dim)]">
-                <span>Model confidence (spread)</span>
+                <span>{t("prediction.confidence")}</span>
                 <span className="tabular">{confidencePct.toFixed(0)}%</span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-elev-2)]">
@@ -188,7 +189,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
             </div>
           )}
           <div className="mt-3 text-[11px] text-[var(--fg-dim)]">
-            Model: {modelDisplayName(single.data.model)}
+            {t("prediction.modelLine", { model: modelDisplayName(single.data.model) })}
           </div>
         </div>
       )}
@@ -201,7 +202,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
         >
           <span className="flex items-center gap-2">
             <GitCompare className="h-3.5 w-3.5" />
-            Compare all models
+            {t("pg.compareAll")}
           </span>
           {compare.isPending ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -217,14 +218,16 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
             {compare.data.consensus_price != null && (
               <div className="rounded-md border border-[var(--accent-2)]/30 bg-[var(--bg)] p-3">
                 <div className="text-[11px] uppercase tracking-wide text-[var(--fg-dim)]">
-                  Consensus (median)
+                  {t("pg.consensus")}
                 </div>
                 <div className="tabular text-lg font-semibold text-[var(--fg)]">
                   {formatCurrency(compare.data.consensus_price)}
                 </div>
                 <div className="tabular mt-0.5 text-[11px] text-[var(--fg-dim)]">
-                  spread {formatCurrency(compare.data.spread_price)} · stddev{" "}
-                  {formatCurrency(compare.data.stddev_price)}
+                  {t("pg.spreadStddev", {
+                    spread: formatCurrency(compare.data.spread_price),
+                    stddev: formatCurrency(compare.data.stddev_price),
+                  })}
                 </div>
               </div>
             )}
@@ -236,7 +239,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
                 >
                   <span className="text-[var(--fg-muted)]">{modelDisplayName(it.model)}</span>
                   {it.error ? (
-                    <Pill tone="down">error</Pill>
+                    <Pill tone="down">{t("common.error")}</Pill>
                   ) : (
                     <span className="tabular font-medium text-[var(--fg)]">
                       {formatCurrency(it.predicted_price)}
@@ -251,7 +254,7 @@ export function PredictionPanel({ property }: { property: PropertyDoc }) {
 
       {(single.isError || compare.isError) && (
         <div className="rounded-md border border-[var(--down)]/30 bg-[var(--down)]/10 p-2 text-xs text-[var(--down)]">
-          Prediction error. Verify prediction_service is running and a champion model is set.
+          {t("prediction.error")}
         </div>
       )}
     </Card>

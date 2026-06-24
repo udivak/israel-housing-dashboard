@@ -4,19 +4,22 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { SearchBar } from "@/components/map/SearchBar";
 import { LocaleToggle } from "./LocaleToggle";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
+import type { Messages } from "@/lib/i18n/en";
 import { cn } from "@/lib/utils";
 
-const NAV = [
-  { href: "/", label: "Home" },
-  { href: "/map", label: "Map" },
-  { href: "/stats", label: "Stats" },
-  { href: "/ai", label: "Predict" },
-  { href: "/settings", label: "Settings" },
+const NAV: { href: string; key: keyof Messages }[] = [
+  { href: "/", key: "nav.home" },
+  { href: "/map", key: "nav.map" },
+  { href: "/stats", key: "nav.stats" },
+  { href: "/ai", key: "nav.predict" },
+  { href: "/settings", key: "nav.settings" },
 ];
 
 export function Header() {
   const router = useRouter();
   const pathname = usePathname() ?? "/";
+  const { t } = useLocale();
 
   const handleSelect = (lon: number, lat: number, zoom = 15) => {
     router.push(`/map?lon=${lon}&lat=${lat}&zoom=${zoom}`);
@@ -33,7 +36,7 @@ export function Header() {
             <span className="text-xs font-bold text-[var(--bg)]">IH</span>
           </div>
           <span className="hidden text-sm font-semibold tracking-tight text-[var(--fg)] sm:inline">
-            Israel Housing
+            {t("header.brand")}
           </span>
         </Link>
 
@@ -49,15 +52,15 @@ export function Header() {
                   : "text-[var(--fg-muted)] hover:bg-[var(--bg-elev)] hover:text-[var(--fg)]",
               )}
             >
-              {item.label}
+              {t(item.key)}
             </Link>
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ms-auto flex items-center gap-3">
           <SearchBar
             onSelect={handleSelect}
-            placeholder="Search address, street, city…"
+            placeholder={t("header.searchPlaceholder")}
             className="hidden w-64 sm:block lg:w-80"
             inputClassName="rounded-md border-[var(--border)] bg-[var(--bg-elev)] py-1.5 text-sm focus:border-[var(--accent-1)]/50 focus:ring-1 focus:ring-[var(--accent-1)]/30"
           />

@@ -2,40 +2,28 @@
 
 import { Database, Map, Brain, Network } from "lucide-react";
 import { Section } from "@/components/ui/Section";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
+import type { Messages } from "@/lib/i18n/en";
 
-const STEPS = [
-  {
-    n: "01",
-    title: "Collect",
-    body: "Nightly Playwright crawls of nadlan.gov.il and partner sources feed a Mongo store.",
-    icon: Database,
-  },
-  {
-    n: "02",
-    title: "Enrich",
-    body: "Each transaction joins OSM context, indexes into H3 r5/r7/r8 cells, and gets price-index adjustments.",
-    icon: Map,
-  },
-  {
-    n: "03",
-    title: "Model",
-    body: "Seven scikit-learn / boosting regressors are trained on the enriched feature table — a champion is elected.",
-    icon: Brain,
-  },
-  {
-    n: "04",
-    title: "Serve",
-    body: "FastAPI + Next.js + MapLibre stream predictions, KPIs, and tiles live.",
-    icon: Network,
-  },
+const STEPS: {
+  n: string;
+  titleKey: keyof Messages;
+  bodyKey: keyof Messages;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  { n: "01", titleKey: "how.step1.title", bodyKey: "how.step1.body", icon: Database },
+  { n: "02", titleKey: "how.step2.title", bodyKey: "how.step2.body", icon: Map },
+  { n: "03", titleKey: "how.step3.title", bodyKey: "how.step3.body", icon: Brain },
+  { n: "04", titleKey: "how.step4.title", bodyKey: "how.step4.body", icon: Network },
 ];
 
 export function HowItWorks() {
+  const { t } = useLocale();
   return (
     <Section
-      title="Under the hood"
-      subtitle="Four services, one pipeline. Built to be reproducible end-to-end."
-      eyebrow="How it works"
+      title={t("how.title")}
+      subtitle={t("how.subtitle")}
+      eyebrow={t("how.eyebrow")}
       className="px-6 py-14"
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -50,9 +38,8 @@ export function HowItWorks() {
                 <span className="tabular">{s.n}</span>
                 <Icon className="h-4 w-4 text-[var(--accent-1)]" />
               </div>
-              <div className="mt-3 text-sm font-semibold text-[var(--fg)]">{s.title}</div>
-              {/* i18n:tbd — long-form descriptive copy stays English in v1 */}
-              <p className="mt-1.5 text-xs leading-relaxed text-[var(--fg-muted)]">{s.body}</p>
+              <div className="mt-3 text-sm font-semibold text-[var(--fg)]">{t(s.titleKey)}</div>
+              <p className="mt-1.5 text-xs leading-relaxed text-[var(--fg-muted)]">{t(s.bodyKey)}</p>
             </div>
           );
         })}

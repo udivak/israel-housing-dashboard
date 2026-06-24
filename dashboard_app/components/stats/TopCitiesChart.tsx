@@ -12,16 +12,20 @@ import {
 } from "recharts";
 import { useByRegion } from "@/hooks/useStats";
 import { ChartCard, fmtNum } from "./ChartCard";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { CHART_COLORS, axisProps, gridProps, tooltipStyle } from "@/lib/chart-theme";
 
 export function TopCitiesChart() {
   const [level, setLevel] = useState<"city" | "neighborhood">("city");
   const { data = [], isLoading } = useByRegion(level, "avg_price_per_sqm", 15);
+  const { t } = useLocale();
 
   return (
     <ChartCard
-      title="Most expensive cities & neighborhoods"
-      subtitle={`By avg ₪/m² · top 15 ${level === "city" ? "cities" : "neighborhoods"}`}
+      title={t("chart.topCitiesTitle")}
+      subtitle={t("chart.topCitiesSubtitle", {
+        level: level === "city" ? t("chart.citiesWord") : t("chart.neighborhoodsWord"),
+      })}
       className="h-96"
     >
       <div className="mb-2 flex gap-1">
@@ -33,7 +37,7 @@ export function TopCitiesChart() {
               : "text-[var(--fg-muted)] hover:bg-[var(--bg-elev-2)]"
           }`}
         >
-          Cities
+          {t("chart.cities")}
         </button>
         <button
           onClick={() => setLevel("neighborhood")}
@@ -43,11 +47,11 @@ export function TopCitiesChart() {
               : "text-[var(--fg-muted)] hover:bg-[var(--bg-elev-2)]"
           }`}
         >
-          Neighborhoods
+          {t("chart.neighborhoods")}
         </button>
       </div>
       {isLoading ? (
-        <div className="flex h-64 items-center justify-center text-xs text-[var(--fg-dim)]">Loading…</div>
+        <div className="flex h-64 items-center justify-center text-xs text-[var(--fg-dim)]">{t("common.loading")}</div>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data} layout="vertical" margin={{ top: 5, right: 10, left: 80, bottom: 5 }}>
@@ -56,7 +60,7 @@ export function TopCitiesChart() {
             <YAxis dataKey="region" type="category" {...axisProps} width={75} />
             <Tooltip
               contentStyle={tooltipStyle}
-              formatter={(value: number) => [fmtNum(value) + " ₪/m²", "avg"]}
+              formatter={(value: number) => [fmtNum(value) + " " + t("property.pricePerSqm"), t("chart.avg")]}
             />
             <Bar dataKey="avg_price_per_sqm" fill={CHART_COLORS.accent1} radius={[0, 4, 4, 0]} />
           </BarChart>
